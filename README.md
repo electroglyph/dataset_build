@@ -12,7 +12,7 @@ If you specify a model, languages will be passed thru the model's tokenizer to c
 
 Human languages (about 30,000 words each): Arabic, Bengali, Bulgarian, Czech, Danish, German, Greek, Estonian, Finnish, French, Hebrew, Hindi, Croatian, Hungarian, Indonesian, Italian, Japanese, Korean, Latvian, Lithuanian, Dutch, Norwegian, Polish, Portuguese, Romanian, Russian, Slovakian, Slovenian, Spanish, Serbian, Swahili, Swedish, Thai, Turkish, Ukrainian, Vietnamese, and Chinese
 
-Programming languages (about 1000 lines each): Bash, C#, C++, Dart, Elixir, Go, Haskell, HTML/CSS/Javascript, Java, Kotlin, Lua, Objective-C, Perl, PHP, Python, R, Ruby, Rust, SQL, Swift, and Typescript
+Programming languages (about 1,000 lines each): Bash, C#, C++, Dart, Elixir, Go, Haskell, HTML/CSS/Javascript, Java, Kotlin, Lua, Objective-C, Perl, PHP, Python, R, Ruby, Rust, SQL, Swift, and Typescript
 
 Total tokens (so far): about 1.3 million
 
