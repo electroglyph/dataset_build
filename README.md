@@ -39,7 +39,7 @@ If you think I could've done a better job, please open a PR. If you want to add 
 ```
 usage: dataset_build [-h] [-i INCLUDE] [-e EXCLUDE] [-l] [-m MODEL] [-c] [-a] [-t]
 
-build a dataset for imatrix, quantization, etc.
+Build a multilingual dataset for imatrix or quantization calibration for LLMs or embedding models
 
 options:
   -h, --help            show this help message and exit
@@ -50,8 +50,8 @@ options:
   -l, --list            List available languages and exit.
   -m, --model MODEL     Path or name of HF model to use to check for unknown tokens.
   -c, --chat            Apply chat template to dataset, disabled by default. Requires model argument.
-  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model    
-                        argument.
+  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires       
+                        model argument.
   -t, --tokenize        Output token ids instead of text, disabled by default. Requires model argument.
 ```
 
