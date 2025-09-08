@@ -30,6 +30,7 @@ I also added an additional English text file with this prompt:
 
 Pick 1000 obscure english words and use each in a short sentence. output one sentence per line, no formatting
 
+---
 
 If you think I could've done a better job, please open a PR. If you want to add a language, please open a PR. If you want to improve on anything...don't be shy, open a PR.
 
