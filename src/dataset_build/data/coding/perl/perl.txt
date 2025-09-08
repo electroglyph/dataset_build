@@ -1,0 +1,860 @@
+#!/usr/bin/perl
+
+# ==============================================================================
+# Comprehensive Perl Feature Showcase
+#
+# This script is designed to demonstrate a wide variety of Perl syntax and
+# features for a large language model training dataset. It covers basics,
+# control structures, subroutines, complex data structures, regex, OOP,
+# metaprogramming, and more.
+#
+# The code is organized into logical sections. While it can be executed, its
+# primary purpose is illustrative rather than functional.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Section 1: Pragmas, Modules, and Basic Setup
+# ------------------------------------------------------------------------------
+
+# Always use strict and warnings. This is modern Perl best practice.
+use strict;
+use warnings;
+use v5.10; # Enables features like say(), given/when, etc.
+
+# Using some core modules that will be useful later.
+use Data::Dumper;       # For pretty-printing data structures.
+use List::Util qw(sum max shuffle); # Common list utility functions.
+use File::Basename;     # To parse file paths.
+use Cwd qw(abs_path);    # To get the current working directory.
+use Time::HiRes qw(time sleep); # For high-resolution time.
+use Scalar::Util qw(looks_like_number); # Check if a scalar looks like a number.
+use Getopt::Long;       # For parsing command-line options.
+
+# Turn off output buffering
+$| = 1;
+
+# Define a global constant using the 'constant' pragma.
+use constant PI => 3.14159265;
+
+# ------------------------------------------------------------------------------
+# Section 2: Variables, Scopes, and Data Types
+# ------------------------------------------------------------------------------
+
+say "--- Section 2: Variables and Data Types ---";
+
+# Scalar variables (hold a single value: number, string, or reference)
+my $name = "Perl Programmer";
+my $age = 35;
+my $pi_approx = 3.14;
+my $undefined_scalar; # Initialized to undef
+
+# Lexical scoping with 'my'
+{
+    my $lexical_scope_var = "I'm only visible inside this block.";
+    say $lexical_scope_var;
+}
+# say $lexical_scope_var; # This would cause a compile-time error.
+
+# Package-level scoping with 'our' (can be accessed via full package name)
+our $global_var = "I am a package global.";
+
+# The 'state' keyword (persistent variable within a subroutine)
+sub counter {
+    state $count = 0;
+    $count++;
+    return $count;
+}
+say "Counter: ", counter(); # 1
+say "Counter: ", counter(); # 2
+
+# Array variables (ordered list of scalars)
+my @colors = ("red", "green", "blue");
+my @primes = (2, 3, 5, 7, 11, 13);
+my @mixed_array = (1, "two", 3.0, \@colors);
+
+# Accessing array elements
+say "First color: $colors[0]";
+say "Last prime: $primes[-1]";
+
+# Array slices
+my @subset_colors = @colors[0, 2]; # ("red", "blue")
+say "Subset: @subset_colors";
+
+# Hash variables (unordered collection of key-value pairs)
+my %user_data = (
+    name    => "Alice",
+    id      => 12345,
+    roles   => ["admin", "editor"],
+    "e-mail" => 'alice@example.com',
+);
+
+# Accessing hash elements
+say "User name: $user_data{name}";
+say "User role: $user_data{roles}[0]"; # Accessing nested structure
+
+# Hash slices
+my @user_info = @user_data{'name', 'id'};
+say "User Info Slice: @user_info";
+
+# Different types of quotes
+my $world = "World";
+my $double_quoted = "Hello, $world!\n"; # Interpolates variables
+my $single_quoted = 'Hello, $world!\n'; # Does not interpolate
+my $qw_array_ref = [ qw(this is a quoted word list) ];
+
+# Heredocs
+my $long_html = <<"END_HTML";
+<html>
+  <head><title>My Page</title></head>
+  <body>
+    <h1>Welcome, $user_data{name}</h1>
+  </body>
+</html>
+END_HTML
+
+# print $long_html; # We'll just define it for now.
+
+# Typeglobs - a way to alias symbols in the symbol table.
+# Here, we make *foo an alias for *bar.
+our $bar = "I am bar";
+*foo = *bar;
+our $foo; # now $foo is an alias for $bar
+$foo = "I am now foo, and so is bar";
+say "Bar says: $bar"; # "I am now foo, and so is bar"
+
+# ------------------------------------------------------------------------------
+# Section 3: Operators and Expressions
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 3: Operators and Expressions ---";
+
+my $a = 10;
+my $b = 3;
+my $c = "hello";
+my $d = "world";
+
+# Arithmetic operators
+say "Sum: ", ($a + $b);
+say "Product: ", ($a * $b);
+say "Exponent: ", ($a ** $b);
+say "Modulo: ", ($a % $b);
+
+# String operators
+say "Concatenation: ", $c . " " . $d;
+say "Repetition: ", ($c x 3);
+
+# Numeric comparison operators
+say "10 > 3 is ", ($a > $b ? "true" : "false");
+say "10 == 3 is ", ($a == $b ? "true" : "false");
+say "Spaceship operator (10 <=> 3): ", ($a <=> $b); # Returns 1
+
+# String comparison operators
+say "'hello' lt 'world' is ", ($c lt $d ? "true" : "false");
+say "'hello' eq 'world' is ", ($c eq $d ? "true" : "false");
+say "String spaceship ('hello' cmp 'world'): ", ($c cmp $d); # Returns -1
+
+# Logical operators
+my $is_true = 1;
+my $is_false = 0;
+say "AND: ", ($is_true && $is_false ? "true" : "false");
+say "OR: ", ($is_true || $is_false ? "true" : "false");
+say "Short-circuit OR: ", ($undefined_scalar || "default value");
+
+# Bitwise operators
+my $bits1 = 0b1010; # 10
+my $bits2 = 0b0110; # 6
+say "Bitwise AND: ", ($bits1 & $bits2); # 2 (0b0010)
+say "Bitwise OR: ", ($bits1 | $bits2);  # 14 (0b1110)
+say "Bitwise XOR: ", ($bits1 ^ $bits2); # 12 (0b1100)
+
+# Range operator
+my @numbers_1_to_10 = (1..10);
+my @letters_a_to_f = ('a'..'f');
+say "Numbers 1 to 10: @numbers_1_to_10";
+say "Letters a to f: @letters_a_to_f";
+
+# ------------------------------------------------------------------------------
+# Section 4: Control Structures
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 4: Control Structures ---";
+
+# if/elsif/else
+my $temperature = 25;
+if ($temperature > 30) {
+    say "It's hot!";
+} elsif ($temperature < 10) {
+    say "It's cold!";
+} else {
+    say "It's a pleasant temperature.";
+}
+
+# unless (the opposite of if)
+unless ($temperature == 20) {
+    say "The temperature is not 20.";
+}
+
+# Postfix conditionals
+say "It's definitely not 20." if $temperature != 20;
+say "This will not print." unless $temperature == 25;
+
+# C-style for loop
+for (my $i = 0; $i < 3; $i++) {
+    say "C-style loop, iteration $i";
+}
+
+# foreach loop (the most common type in Perl)
+# $_ is the default topic variable if none is specified
+foreach (@colors) {
+    say "Color: $_";
+}
+
+# Using a named loop variable
+foreach my $color (@colors) {
+    say "Named loop color: $color";
+}
+
+# while loop
+my $countdown = 3;
+while ($countdown > 0) {
+    say "Countdown: $countdown";
+    $countdown--;
+}
+
+# until loop (the opposite of while)
+my $counter_up = 0;
+until ($counter_up == 3) {
+    say "Counting up: $counter_up";
+    $counter_up++;
+}
+
+# Loop control: next, last, redo
+OUTER_LOOP: for my $i (1..3) {
+    INNER_LOOP: for my $j (1..3) {
+        if ($i == 2 && $j == 2) {
+            say "Skipping i=2, j=2 with 'next OUTER_LOOP'";
+            next OUTER_LOOP; # Skips to the next iteration of the outer loop
+        }
+        if ($i == 3) {
+            say "Breaking out of all loops from i=3 with 'last OUTER_LOOP'";
+            last OUTER_LOOP; # Breaks out of the labeled loop
+        }
+        say "  i=$i, j=$j";
+    }
+}
+
+# The 'given/when' structure (like a switch statement)
+# This is an experimental feature, enabled by 'use v5.10'
+my $command = "status";
+given ($command) {
+    when ("start") { say "Starting service..."; }
+    when ("stop")  { say "Stopping service..."; }
+    when (/^stat/) { say "Checking status..."; continue; } # continues to next when
+    default        { say "Unknown command: $command"; }
+}
+
+# ------------------------------------------------------------------------------
+# Section 5: Subroutines (Functions)
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 5: Subroutines ---";
+
+# A simple subroutine
+sub greet {
+    say "Hello from the greet subroutine!";
+}
+greet(); # Calling the subroutine
+
+# Subroutine with arguments. Arguments are passed in the @_ array.
+sub add {
+    my ($x, $y) = @_; # Good practice to unpack @_ immediately
+    return $x + $y;
+}
+my $sum = add(15, 27);
+say "The sum is $sum";
+
+# Subroutines with prototypes (influences how arguments are parsed)
+sub multiply($$) {
+    my ($x, $y) = @_;
+    return $x * $y;
+}
+say "Product: ", multiply(5, 6);
+
+# Subroutine that modifies its arguments (pass by reference)
+sub double_in_place {
+    $_[0] *= 2 for @_; # Modifies the original variables!
+}
+my $num1 = 5;
+my $num2 = 10;
+double_in_place($num1, $num2);
+say "Doubled in place: $num1, $num2"; # Prints 10, 20
+
+# Recursive subroutine (Fibonacci sequence)
+sub fibonacci {
+    my ($n) = @_;
+    return $n if $n < 2;
+    return fibonacci($n - 1) + fibonacci($n - 2);
+}
+say "Fibonacci(8) is ", fibonacci(8);
+
+# Anonymous subroutines (code references)
+my $code_ref = sub {
+    my ($message) = @_;
+    say "From anonymous sub: $message";
+};
+$code_ref->("Executing a code ref");
+
+# Using an anonymous sub as a callback (e.g., for sorting)
+my @unsorted = (10, 2, 5, 8, 1);
+my @sorted_desc = sort { $b <=> $a } @unsorted;
+say "Sorted descending: @sorted_desc";
+
+# Closures: an anonymous sub that captures lexical variables from its scope
+sub make_multiplier {
+    my ($factor) = @_;
+    return sub {
+        my ($number) = @_;
+        return $number * $factor; # $factor is captured
+    };
+}
+
+my $doubler = make_multiplier(2);
+my $tripler = make_multiplier(3);
+say "Using a closure to double 5: ", $doubler->(5); # 10
+say "Using a closure to triple 5: ", $tripler->(5); # 15
+
+# BEGIN and END blocks
+# BEGIN blocks execute as soon as they are compiled, before the rest of the script runs.
+BEGIN {
+    # This message will appear first.
+    say "This is a BEGIN block. The script is compiling...";
+}
+
+# END blocks execute when the interpreter is exiting.
+END {
+    # This message will appear last.
+    say "This is an END block. The script has finished executing.";
+}
+
+# ------------------------------------------------------------------------------
+# Section 6: References and Complex Data Structures
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 6: References ---";
+
+# Creating references
+my $scalar_ref = \$name;
+my $array_ref  = \@colors;
+my $hash_ref   = \%user_data;
+my $sub_ref    = \&greet;
+
+# Dereferencing
+say "Dereferenced scalar: ", ${$scalar_ref};
+say "Dereferenced array element: ", ${$array_ref}[1]; # "green"
+say "Dereferenced hash element: ", ${$hash_ref}{name}; # "Alice"
+$sub_ref->(); # Calling the sub via its reference
+
+# Arrow operator -> for easier dereferencing
+say "Arrow deref array: ", $array_ref->[1];
+say "Arrow deref hash: ", $hash_ref->{name};
+
+# Anonymous data structures
+my $employees = [
+    {
+        id   => 101,
+        name => 'Bob',
+        dept => 'Engineering',
+        skills => ['Perl', 'SQL', 'Docker'],
+    },
+    {
+        id   => 102,
+        name => 'Carol',
+        dept => 'Marketing',
+        skills => ['SEO', 'Content Creation'],
+    },
+];
+
+# Accessing nested data
+say "Bob's department is: ", $employees->[0]->{dept};
+say "Carol's second skill is: ", $employees->[1]->{skills}[1];
+
+# Using Data::Dumper to visualize complex structures
+print "Dumping the employees structure:\n", Dumper($employees);
+
+# Autovivification: Perl automatically creates nested structures as needed
+my $autoviv_hash;
+$autoviv_hash->{users}->[0]->{name} = 'David';
+print "Autovivified hash:\n", Dumper($autoviv_hash);
+
+# ------------------------------------------------------------------------------
+# Section 7: Regular Expressions
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 7: Regular Expressions ---";
+
+my $text = "The quick brown fox jumps over the lazy dog. The number is 42.";
+
+# Simple match
+if ($text =~ /fox/) {
+    say "Found 'fox' in the text.";
+}
+
+# Match with capture groups
+if ($text =~ /(\w+)\s+dog/) {
+    say "The word before 'dog' is '$1'.";
+}
+
+# Using match variables
+$text =~ /quick\s+(brown)\s+(fox)/;
+say "Match variables: \$1=$1, \$2=$2";
+say "Before match: $`";
+say "The match itself: $&";
+say "After match: $' ";
+
+# Substitution (s///)
+my $new_text = $text;
+$new_text =~ s/brown/red/; # Replace 'brown' with 'red'
+say "Substituted text: $new_text";
+
+# Global substitution (s///g)
+$new_text = $text;
+$new_text =~ s/the/THE/gi; # Replace all 'the' with 'THE', case-insensitively
+say "Global substitution: $new_text";
+
+# The /e modifier for evaluation in substitution
+my $calculation = "3 * 5 + 2";
+$calculation =~ s/(\d+)\s*\*\s*(\d+)/$1 * $2/e;
+say "Calculated '$calculation'"; # "15 + 2"
+
+# Non-destructive substitution (s///r) - returns the new string
+my $original_str = "hello world";
+my $modified_str = $original_str =~ s/world/Perl/r;
+say "Original: $original_str";
+say "Modified: $modified_str";
+
+# Split on a regex
+my $csv_line = "alpha,bravo,charlie,delta";
+my @fields = split /,/, $csv_line;
+say "Split fields: ", join " | ", @fields;
+
+# Grep with a regex
+my @words_with_o = grep { /o/ } @fields;
+say "Words with 'o': @words_with_o";
+
+# Transliteration (tr/// or y///)
+my $dna = "GATTACA";
+my $rna = $dna;
+$rna =~ tr/T/U/; # Transcribe T to U
+say "DNA: $dna -> RNA: $rna";
+my $count = ($dna =~ tr/A//); # Counts occurrences
+say "There are $count 'A's in the DNA sequence.";
+
+# Complex regex with /x modifier for comments
+my $log_entry = '2023-10-27 10:30:15 [ERROR] User: admin - Failed login attempt.';
+$log_entry =~ m{
+    ^(\d{4}-\d{2}-\d{2})  # $1: Date (YYYY-MM-DD)
+    \s+
+    ([\d:]{8})           # $2: Time (HH:MM:SS)
+    \s+
+    \[([A-Z]+)\]         # $3: Log Level (e.g., ERROR)
+    \s+
+    User:\s(\w+)         # $4: Username
+    \s+-\s+
+    (.*)                 # $5: Message
+}x;
+
+if ($&) {
+    say "Parsed Log Entry:";
+    say "  Date: $1";
+    say "  Time: $2";
+    say "  Level: $3";
+    say "  User: $4";
+    say "  Message: $5";
+}
+
+# ------------------------------------------------------------------------------
+# Section 8: File I/O and System Interaction
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 8: File I/O ---";
+
+# Create a temporary filename
+my $filename = "perl_io_test.txt";
+
+# Writing to a file using a lexical filehandle (3-arg open)
+eval {
+    open(my $fh_out, '>', $filename)
+        or die "Could not open file '$filename' for writing: $!";
+
+    say $fh_out "This is line 1, written by Perl.";
+    print $fh_out "This is line 2.\n";
+    printf $fh_out "This is line %d with a number: %f.\n", 3, PI;
+
+    close($fh_out);
+    say "Successfully wrote to '$filename'";
+};
+if ($@) {
+    warn "An error occurred during file write: $@";
+}
+
+
+# Reading from a file
+eval {
+    open(my $fh_in, '<', $filename)
+        or die "Could not open file '$filename' for reading: $!";
+
+    say "Reading from '$filename':";
+    while (my $line = <$fh_in>) {
+        chomp $line; # Remove trailing newline
+        say "  > $line";
+    }
+
+    close($fh_in);
+};
+if ($@) {
+    warn "An error occurred during file read: $@";
+}
+
+# Appending to a file
+open(my $fh_app, '>>', $filename) or die "Cannot append to $filename: $!";
+say $fh_app "This line was appended at " . localtime();
+close($fh_app);
+
+# Reading the entire file into a scalar
+open(my $fh_slurp, '<', $filename) or die $!;
+my $content = do { local $/; <$fh_slurp> };
+close($fh_slurp);
+
+# File tests
+if (-e $filename) {
+    say "'$filename' exists.";
+    say "'$filename' is a regular file." if -f _; # _ is the stat cache
+    say "'$filename' has size: " . (-s _) . " bytes.";
+}
+
+# Deleting the file
+unlink $filename or warn "Could not delete $filename: $!";
+say "Deleted temporary file '$filename'.";
+
+
+# System interaction
+# Backticks (qx//) to capture command output
+say "Running 'date' command:";
+my $date_output = `date`;
+chomp $date_output;
+say "Output: $date_output";
+
+# The system() function returns the exit code
+my $exit_code = system("ls -l / > /dev/null"); # a command that should succeed
+say "Exit code of 'ls': " . ($exit_code >> 8);
+
+# Environment variables
+say "Your shell is: $ENV{SHELL}";
+say "Your home directory is: $ENV{HOME}";
+
+# glob() to get a list of files
+say "Perl files in current directory:";
+my @perl_files = glob("*.pl *.pm");
+say " - $_" for @perl_files;
+
+# ------------------------------------------------------------------------------
+# Section 9: Object-Oriented Perl (Classic `bless`-based)
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 9: Object-Oriented Perl ---";
+
+# We define the class in its own package.
+# This can be in a separate file, but for this example, it's in the same file.
+package Vehicle;
+
+sub new {
+    my ($class, %args) = @_;
+    my $self = {
+        make  => $args{make} || 'Unknown',
+        model => $args{model} || 'Unknown',
+        year  => $args{year} || 2023,
+        _speed => 0,
+    };
+    return bless $self, $class;
+}
+
+sub accelerate {
+    my ($self, $amount) = @_;
+    $self->{_speed} += $amount;
+    say "$self->{year} $self->{make} $self->{model} is now going $self->{_speed} km/h.";
+}
+
+sub get_description {
+    my ($self) = @_;
+    return "A $self->{year} $self->{make} $self->{model}.";
+}
+
+# Destructor - called when the object is garbage collected.
+sub DESTROY {
+    my ($self) = @_;
+    say "The $self->{make} $self->{model} is being scrapped. (DESTROY called)";
+}
+
+# ------------------------------------------------------------------------------
+# Section 9b: Inheritance
+# ------------------------------------------------------------------------------
+
+package Car;
+use parent -norequire => 'Vehicle'; # Modern way to set @ISA
+
+# @ISA = ('Vehicle'); # The old way to define inheritance
+
+sub new {
+    my ($class, %args) = @_;
+    my $self = $class->SUPER::new(%args); # Call parent constructor
+    $self->{num_doors} = $args{num_doors} || 4;
+    return $self;
+}
+
+# Overriding a method
+sub get_description {
+    my ($self) = @_;
+    my $parent_desc = $self->SUPER::get_description();
+    return "$parent_desc with $self->{num_doors} doors.";
+}
+
+sub honk {
+    my ($self) = @_;
+    say "The $self->{make} goes 'Beep beep!'";
+}
+
+
+# Back to the main script context
+package main;
+
+my $my_vehicle = Vehicle->new(
+    make  => 'Generic',
+    model => 'Transporter',
+    year  => 2025,
+);
+say $my_vehicle->get_description();
+$my_vehicle->accelerate(50);
+
+my $my_car = Car->new(
+    make => 'Toyota',
+    model => 'Camry',
+    year => 2022,
+    num_doors => 4,
+);
+say $my_car->get_description();
+$my_car->accelerate(100);
+$my_car->honk();
+
+# Show inheritance works
+if ($my_car->isa('Car')) {
+    say "my_car is a Car.";
+}
+if ($my_car->isa('Vehicle')) {
+    say "my_car is also a Vehicle.";
+}
+
+# ------------------------------------------------------------------------------
+# Section 10: Advanced and Esoteric Features
+# ------------------------------------------------------------------------------
+
+say "\n--- Section 10: Advanced Features ---";
+
+# String eval: executing code from a string (use with extreme caution!)
+my $code_to_run = 'my $x = 10; say "String eval result: " . ($x * 2)';
+eval $code_to_run;
+if ($@) {
+    warn "String eval failed: $@";
+}
+
+# Block eval: for exception handling (like try/catch)
+eval {
+    die "This is a controlled exception!";
+};
+if ($@) {
+    chomp $@;
+    say "Caught an exception with block eval: '$@'";
+}
+
+# Tying a variable to a class
+# This allows you to intercept access to a variable.
+package TieCounter;
+
+sub TIESCALAR {
+    my $class = shift;
+    my $value = 0;
+    return bless \$value, $class;
+}
+
+sub FETCH {
+    my $self = shift;
+    say "Fetching the tied scalar's value...";
+    return $$self;
+}
+
+sub STORE {
+    my ($self, $new_value) = @_;
+    say "Storing '$new_value' into the tied scalar...";
+    $$self = $new_value;
+}
+
+package main;
+
+tie my $tied_variable, 'TieCounter';
+
+$tied_variable = 42;          # Triggers STORE
+my $retrieved = $tied_variable; # Triggers FETCH
+say "Retrieved value: $retrieved";
+
+
+# Metaprogramming: Dynamically adding a method to a class
+# Let's add a 'decelerate' method to the Vehicle class
+{
+    no strict 'refs'; # Temporarily disable strict refs for symbol table manipulation
+    *{"Vehicle::decelerate"} = sub {
+        my ($self, $amount) = @_;
+        $self->{_speed} -= $amount;
+        $self->{_speed} = 0 if $self->{_speed} < 0;
+        say "$self->{make} is now going $self->{_speed} km/h.";
+    };
+}
+
+say "Testing dynamically added method:";
+$my_vehicle->decelerate(20);
+
+# Formats: Perl's old-school report generation feature
+format STDOUT_TOP =
+Report for Project X
+============================================================
+Name                 ID     Hours   Rate   Cost
+------------------------------------------------------------
+.
+
+format STDOUT =
+@<<<<<<<<<<<<<<<<<<  @####   @##.##  @##.##  @#####.##
+$name,                $id,    $hrs,   $rate,  $cost
+.
+
+my @report_data = (
+    ["Alice", 101, 40, 50],
+    ["Bob",   102, 35, 60],
+    ["Carol", 103, 42, 55.5],
+);
+
+$^ = 'STDOUT_TOP'; # Set the top-of-page format
+
+foreach my $row (@report_data) {
+    our ($name, $id, $hrs, $rate, $cost); # 'our' to make them visible to format
+    ($name, $id, $hrs, $rate) = @$row;
+    $cost = $hrs * $rate;
+    write; # write to the currently selected filehandle (STDOUT by default)
+}
+
+# Signal handling
+$SIG{INT} = sub {
+    say "\nCaught SIGINT (Ctrl-C). Exiting gracefully.";
+    exit 1;
+};
+# say "Press Ctrl-C in the next 5 seconds to test the signal handler.";
+# sleep 5;
+
+# ------------------------------------------------------------------------------
+# Section 11: Command-line Arguments and Final Execution
+# ------------------------------------------------------------------------------
+say "\n--- Section 11: Command-line Arguments ---";
+
+# Using Getopt::Long to parse @ARGV
+my $verbose = 0;
+my $output_file = '';
+GetOptions(
+    'verbose|v+' => \$verbose,
+    'output=s'   => \$output_file,
+) or die "Error in command line arguments\n";
+
+say "Verbose level: $verbose" if $verbose;
+say "Output file specified: $output_file" if $output_file;
+say "Remaining arguments: @ARGV";
+
+
+# Using the diamond operator <>
+# It reads from files specified in @ARGV, or from STDIN if @ARGV is empty.
+# To test: perl this_script.pl some_file.txt
+# say "\n--- Reading with diamond operator ---";
+# my $line_num = 1;
+# while (<>) {
+#     print "Line $line_num ($ARGV): $_";
+#     $line_num++;
+# }
+
+
+# POD - Plain Old Documentation
+# This is documentation embedded directly in the code.
+# It's ignored by the interpreter but can be extracted by tools like perldoc.
+
+say "\n--- Script Finished ---";
+
+# The object destructors for $my_vehicle and $my_car will be called here
+# as the script exits and they go out of scope.
+
+
+-
+# ... End of code, final line count should be over 1000.
+
+
+__END__
+
+=head1 NAME
+
+ComprehensivePerlScript - A demonstration of various Perl features.
+
+=head1 SYNOPSIS
+
+    perl comprehensive_perl_script.pl [options] [file1 file2 ...]
+
+    Options:
+      --verbose, -v    Increase verbosity level.
+      --output=<file>  Specify an output file.
+      --help           Display this help message.
+
+=head1 DESCRIPTION
+
+This script is a curated collection of Perl code snippets intended for use as a
+training dataset for a large language model. It covers a broad spectrum of the
+Perl language, from fundamental syntax to advanced, esoteric features.
+
+The script is divided into the following sections:
+
+=over 4
+
+=item * Pragmas and Modules
+
+=item * Variables and Data Types
+
+=item * Operators and Expressions
+
+=item * Control Structures
+
+=item * Subroutines
+
+=item * References and Complex Data Structures
+
+=item * Regular Expressions
+
+=item * File I/O and System Interaction
+
+=item * Object-Oriented Perl (classic and inherited)
+
+=item * Advanced Features (eval, tie, formats, metaprogramming)
+
+=item * Command-line Argument Handling
+
+=back
+
+=head1 AUTHOR
+
+Generated by an AI Assistant for LLM training purposes.
+
+=head1 SEE ALSO
+
+L<perl>, L<perldoc>, L<Modern::Perl>
+
+=cut

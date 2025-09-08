@@ -1,0 +1,35 @@
+These are scripts from ancient civilizations or languages that are no longer in common use. They appear almost exclusively in specialized academic or historical texts.
+
+Character	Unicode Code Point	Name	Description
+𐁀	U+10040	Linear B Syllable B039 E	A syllabic sign from the ancient Mycenaean Greek script.
+𐌰	U+10330	Gothic Letter Ahsa	A letter from the Gothic alphabet, used to write the extinct Gothic language.
+楔	U+1235A	Cuneiform Sign Ur A	A sign from one of the earliest systems of writing, used in ancient Mesopotamia.
+𐇐	U+101D0	Phaistos Disc Sign Pedestrian	A symbol from the mysterious Phaistos Disc, an undeciphered artifact from Minoan Crete.
+ᚁ	U+1681	Ogham Letter Beith	A letter from the Ogham script, used to write early forms of the Irish language.
+2. Niche Technical and Obscure Symbols
+
+This category includes symbols from highly specialized fields like alchemy, ancient music notation, or rare mathematical systems.
+
+Character	Unicode Code Point	Name	Description
+🝪	U+1F76A	Alchemical Symbol For Sublimate Of Antimony	An obscure symbol used in historical alchemical texts.
+🀀	U+1D000	Byzantine Musical Symbol Fthora Skliron Chroma Vasis	A complex note from a medieval system of musical notation.
+🁐	U+1F050	Domino Tile Horizontal-01-00	A specific domino tile symbol; while some game symbols might appear, the full set is rarely in a vocabulary.
+𝍡	U+1D361	Counting Rod Unit Digit Two	A symbol for representing numbers from an ancient Chinese system.
+3. Private Use Area (PUA) Characters
+
+This is the most guaranteed category. The Private Use Areas are blocks of code points intentionally left undefined by the Unicode standard. They are meant for developers, font designers, or closed systems to define their own characters.
+
+Since they have no standardized meaning, they should never appear in public training data. Any model that recognizes them has likely been fine-tuned on specific data or is using a byte-level tokenizer.
+
+Character	Unicode Code Point	Name	Description
+	U+E000	(Private Use Area)	The very first character in the main PUA block. Often renders as a box or question mark.
+󰀀	U+F0000	(Supplementary Private Use Area-A)	A character from a supplementary PUA block. Used for things like custom icon fonts (e.g., Nerd Fonts).
+	U+F118	(Private Use Area)	Font Awesome famously used the PUA for its icons before many became official Unicode symbols.
+4. Special-Purpose and Obscure Formatting Characters
+
+While some formatting characters (like the zero-width space) are known to tokenizers, others are so obscure that they are unlikely to be handled gracefully. They might not just become <unk>, but could be ignored or cause strange tokenization behavior.
+
+Character	Unicode Code Point	Name	Description
+᠎	U+180E	Mongolian Vowel Separator	A specific formatting character used in the Mongolian script that has no visible glyph.
+𝅳	U+1D173	Musical Symbol Begin Beam	A control character for formatting musical notation scores.
+	U+E07F	(Private Use Area)	Another PUA character, often used as a special separator or marker in proprietary systems.

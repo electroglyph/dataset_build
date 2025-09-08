@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Comprehensive Web Tech Showcase</title>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <!-- ~ PART 1: INLINE CSS (approx. 333 lines)        ~ -->
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --base-font-size: 16px;
+            --border-radius-sm: 0.2rem;
+            --border-radius-md: 0.5rem;
+            --border-radius-lg: 1rem;
+            --shadow-light: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-medium: 0 3px 6px rgba(0,0,0,0.16);
+            --spacing-unit: 1rem;
+        }
+
+        /* Basic Reset and Global Styles */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: var(--base-font-size);
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-family-sans-serif);
+            line-height: 1.6;
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out;
+        }
+        
+        body.dark-theme {
+            background-color: var(--dark-color);
+            color: var(--light-color);
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            margin-bottom: calc(var(--spacing-unit) * 0.75);
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; }
+        h3 { font-size: 1.75rem; }
+        p { margin-bottom: 1rem; }
+        a { color: var(--primary-color); text-decoration: none; }
+        a:hover { text-decoration: underline; color: #0056b3; }
+        code {
+            font-family: var(--font-family-monospace);
+            background-color: #e9ecef;
+            padding: 0.2em 0.4em;
+            border-radius: var(--border-radius-sm);
+        }
+
+        /* Layout and Container */
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: calc(var(--spacing-unit) * 2);
+        }
+
+        /* Header and Navigation Styling */
+        .main-header {
+            background-color: white;
+            padding: var(--spacing-unit) 0;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: var(--shadow-light);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .main-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-nav .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+
+        .main-nav ul {
+            list-style-type: none;
+            display: flex;
+        }
+
+        .main-nav ul li {
+            margin-left: calc(var(--spacing-unit) * 1.5);
+        }
+
+        .main-nav ul li a {
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            border-radius: var(--border-radius-md);
+        }
+
+        .main-nav ul li a:hover,
+        .main-nav ul li a.active {
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Section and Card Styling */
+        .widget-section {
+            padding: calc(var(--spacing-unit) * 2) 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        
+        .widget-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: var(--border-radius-md);
+            padding: calc(var(--spacing-unit) * 1.5);
+            margin-bottom: var(--spacing-unit);
+            box-shadow: var(--shadow-medium);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.19);
+        }
+        
+        body.dark-theme .card {
+            background-color: #495057;
+            border-color: #6c757d;
+        }
+        
+        body.dark-theme .main-header {
+            background-color: #212529;
+            border-bottom-color: #495057;
+        }
+        
+        body.dark-theme .main-nav .logo {
+            color: var(--light-color);
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            margin: 0.25rem;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        .btn-primary:hover {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+
+        .btn-secondary {
+            color: #fff;
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .btn-danger {
+            color: #fff;
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .btn-success {
+            color: #fff;
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn[disabled] {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius-sm);
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-control:focus {
+            color: #495057;
+            background-color: #fff;
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,..."); /* Placeholder for dropdown arrow */
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 15px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            border-radius: 5px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            background: var(--primary-color);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            vertical-align: top;
+            border-top: 1px solid #dee2e6;
+            text-align: left;
+        }
+
+        .data-table thead th {
+            vertical-align: bottom;
+            border-bottom: 2px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+
+        .data-table tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .data-table tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+
+        /* Flexbox and Grid Layout Example Styles */
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-unit);
+            background-color: #f0f0f0;
+            padding: var(--spacing-unit);
+        }
+
+        .flex-item {
+            background-color: var(--info-color);
+            color: white;
+            padding: var(--spacing-unit);
+            border-radius: var(--border-radius-sm);
+            flex: 1 1 150px; /* Flex-grow, flex-shrink, flex-basis */
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-gap: var(--spacing-unit);
+            padding: var(--spacing-unit);
+            background-color: #e0e0e0;
+        }
+
+        .grid-item {
+            background-color: var(--warning-color);
+            padding: var(--spacing-unit);
+            border-radius: var(--border-radius-sm);
+            text-align: center;
+        }
+        
+        .grid-item.span-2 {
+            grid-column: span 2;
+        }
+
+        /* Canvas and Media Styles */
+        #mainCanvas {
+            border: 2px solid var(--dark-color);
+            border-radius: var(--border-radius-md);
+            background-color: #fff;
+        }
+        
+        video, audio {
+            max-width: 100%;
+            border-radius: var(--border-radius-md);
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+            }
+        }
+        
+        .pulsing-button {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes slideInFromLeft {
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide {
+            animation: slideInFromLeft 0.5s ease-out forwards;
+        }
+
+        /* Pseudo-elements and Pseudo-selectors */
+        .card h3::before {
+            content: '📌 ';
+            color: var(--primary-color);
+        }
+
+        .form-group input:not([type=checkbox]):not([type=radio]):required {
+            border-left: 5px solid var(--danger-color);
+        }
+
+        .form-group input:valid {
+            border-left: 5px solid var(--success-color);
+        }
+
+        /* Responsive Design using Media Queries */
+        @media (max-width: 768px) {
+            .main-nav {
+                flex-direction: column;
+            }
+            .main-nav ul {
+                margin-top: var(--spacing-unit);
+                flex-direction: column;
+                width: 100%;
+                text-align: center;
+            }
+            .main-nav ul li {
+                margin: 0.5rem 0;
+            }
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* Custom utility classes */
+        .text-center { text-align: center; }
+        .text-danger { color: var(--danger-color); }
+        .mt-2 { margin-top: calc(var(--spacing-unit) * 2); }
+        .mb-0 { margin-bottom: 0; }
+        .p-0 { padding: 0; }
+        
+    </style>
+</head>
+<body>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <!-- ~ PART 2: HTML (approx. 333 lines)             ~ -->
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <header class="main-header">
+        <nav class="main-nav container">
+            <div class="logo">DevDashboard</div>
+            <ul>
+                <li><a href="#dom-section" class="active">DOM</a></li>
+                <li><a href="#data-section">Data</a></li>
+                <li><a href="#graphics-section">Graphics</a></li>
+                <li><a href="#layout-section">Layout</a></li>
+                <li><a href="#api-section">API</a></li>
+            </ul>
+            <button id="theme-toggle" class="btn btn-secondary">Toggle Theme</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section id="welcome-section" class="widget-section">
+            <h1 class="animate-slide">Web Technologies Showcase</h1>
+            <p>This page is a comprehensive demonstration of various HTML, CSS, and JavaScript features. Interact with the elements below to see them in action.</p>
+        </section>
+
+        <!-- DOM Manipulation Section -->
+        <section id="dom-section" class="widget-section">
+            <div class="card">
+                <h3>DOM Manipulation</h3>
+                <p>Click the buttons to change the content and style of the box below.</p>
+                <div id="dom-target-box" style="padding: 20px; border: 1px solid #ccc; margin-top: 10px; transition: all 0.5s;">
+                    I am the target box. My content will change.
+                </div>
+                <div class="mt-2">
+                    <button id="change-text-btn" class="btn btn-primary">Change Text</button>
+                    <button id="change-html-btn" class="btn btn-primary">Change HTML</button>
+                    <button id="change-style-btn" class="btn btn-secondary">Change Style</button>
+                    <button id="add-element-btn" class="btn btn-success">Add Element</button>
+                    <button id="remove-element-btn" class="btn btn-danger" disabled>Remove Element</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Handling and Forms Section -->
+        <section id="data-section" class="widget-section">
+            <div class="card">
+                <h3>Forms, Events & Data</h3>
+                <form id="user-profile-form" novalidate>
+                    <div class="form-group">
+                        <label for="username">Username (required):</label>
+                        <input type="text" id="username" name="username" class="form-control" required minlength="4">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email (conditionally required):</label>
+                        <input type="email" id="email" name="email" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="subscribe-checkbox" name="subscribe" checked>
+                            Subscribe to newsletter
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-level">User Level:</label>
+                        <input type="range" id="user-level" name="level" min="1" max="100" value="50" class="form-control">
+                        <span id="user-level-display">50</span>
+                    </div>
+                     <div class="form-group">
+                        <label for="user-role">Role:</label>
+                        <select id="user-role" name="role" class="form-control">
+                            <option value="guest">Guest</option>
+                            <option value="user" selected>User</option>
+                            <option value="editor">Editor</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <fieldset>
+                        <legend>Preferred Contact Method</legend>
+                        <label><input type="radio" name="contact" value="email" checked> Email</label>
+                        <label><input type="radio" name="contact" value="phone"> Phone</label>
+                        <label><input type="radio" name="contact" value="none"> None</label>
+                    </fieldset>
+                    <button type="submit" class="btn btn-success pulsing-button">Submit Profile</button>
+                    <button type="reset" class="btn btn-secondary">Reset</button>
+                </form>
+                <div id="form-output" class="mt-2" style="white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 5px;"></div>
+            </div>
+        </section>
+
+        <!-- Graphics and Canvas Section -->
+        <section id="graphics-section" class="widget-section">
+            <div class="card">
+                <h3>HTML5 Canvas & Graphics</h3>
+                <p>A simple animation drawn on a <code>&lt;canvas&gt;</code> element. Animation is controlled via JavaScript.</p>
+                <canvas id="mainCanvas" width="600" height="200"></canvas>
+            </div>
+        </section>
+
+        <!-- Complex Layout Section -->
+        <section id="layout-section" class="widget-section">
+            <div class="card">
+                <h3>Complex Layouts</h3>
+                <h4>Flexbox Example</h4>
+                <div class="flex-container">
+                    <div class="flex-item">Item 1</div>
+                    <div class="flex-item">Item 2 (longer content)</div>
+                    <div class="flex-item">Item 3</div>
+                    <div class="flex-item">Item 4</div>
+                </div>
+                <h4 class="mt-2">Grid Example</h4>
+                <div class="grid-container">
+                    <div class="grid-item">A</div>
+                    <div class="grid-item">B</div>
+                    <div class="grid-item span-2">C (spans 2 columns)</div>
+                    <div class="grid-item">D</div>
+                    <div class="grid-item">E</div>
+                    <div class="grid-item">F</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Interaction Section -->
+        <section id="api-section" class="widget-section">
+            <div class="card">
+                <h3>API Interaction (Fetch)</h3>
+                <p>Click the button to fetch mock user data from a simulated API endpoint.</p>
+                <button id="fetch-data-btn" class="btn btn-info">Fetch User Data</button>
+                <div id="api-result" class="mt-2" style="font-family: var(--font-family-monospace);">
+                    <!-- API data will be displayed here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Table Section -->
+        <section id="table-section" class="widget-section">
+            <div class="card">
+                <h3>Structured Data with Tables</h3>
+                <table class="data-table">
+                    <caption>Monthly Project Status</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Project ID</th>
+                            <th scope="col">Project Name</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Progress (%)</th>
+                            <th scope="col">Lead Developer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>P-101</td>
+                            <td>Quantum Entangler</td>
+                            <td>In Progress</td>
+                            <td>75</td>
+                            <td>Dr. Evelyn Reed</td>
+                        </tr>
+                        <tr>
+                            <td>P-102</td>
+                            <td>Time-space Modulator</td>
+                            <td>On Hold</td>
+                            <td>30</td>
+                            <td>Prof. Alistair Finch</td>
+                        </tr>
+                        <tr>
+                            <td>P-103</td>
+                            <td>Dark Matter API</td>
+                            <td>Completed</td>
+                            <td>100</td>
+                            <td>Jane Doe</td>
+                        </tr>
+                        <tr>
+                            <td>P-104</td>
+                            <td>UI Refresh 2024</td>
+                            <td>Planning</td>
+                            <td>10</td>
+                            <td>John Smith</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">Total Projects</td>
+                            <td colspan="2">4</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+
+        <!-- Multimedia Section -->
+        <section id="media-section" class="widget-section">
+            <div class="card">
+                <h3>Multimedia Elements</h3>
+                <h4>Video Player</h4>
+                <video controls width="500" preload="metadata">
+                    <!-- A placeholder video source -->
+                    <source src="/media/examples/video.mp4" type="video/mp4">
+                    <source src="/media/examples/video.webm" type="video/webm">
+                    Sorry, your browser doesn't support embedded videos.
+                </video>
+                <h4 class="mt-2">Audio Player</h4>
+                <audio controls>
+                     <!-- A placeholder audio source -->
+                    <source src="/media/examples/audio.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </section>
+
+        <!-- Web Components / Templates Section -->
+        <section id="template-section" class="widget-section">
+            <div class="card">
+                <h3>Templates &amp; Custom Elements</h3>
+                <p>This section uses a <code>&lt;template&gt;</code> to create reusable custom elements.</p>
+                
+                <!-- The template for our custom element -->
+                <template id="user-card-template">
+                    <style>
+                        .user-card {
+                            border: 1px solid #ccc;
+                            padding: 1rem;
+                            border-radius: 8px;
+                            display: flex;
+                            align-items: center;
+                            gap: 1rem;
+                            background: #f9f9f9;
+                        }
+                        .user-card img {
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 50%;
+                            object-fit: cover;
+                        }
+                        .user-info h4 { margin: 0; }
+                    </style>
+                    <div class="user-card">
+                        <img src="https://i.pravatar.cc/70" alt="User Avatar">
+                        <div class="user-info">
+                            <h4 id="name"><slot name="username">Default User</slot></h4>
+                            <p id="email"><slot name="email">no-email@example.com</slot></p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Instances of the custom element -->
+                <div id="custom-elements-container">
+                    <p>Custom elements will be dynamically inserted here.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Unsafe Code Demonstration Section -->
+        <section id="unsafe-section" class="widget-section">
+            <div class="card">
+                <h3>"Unsafe" JavaScript Showcase</h3>
+                <p>Demonstrates features that should be used with caution, like <code>eval()</code> and <code>innerHTML</code>.</p>
+                
+                <h4>Simple Calculator using <code>eval()</code></h4>
+                <input type="text" id="eval-input" class="form-control" value="5 * (10 + 2)">
+                <button id="eval-button" class="btn btn-warning mt-2">Calculate</button>
+                <p>Result: <span id="eval-result"></span></p>
+
+                <h4>HTML Injection via <code>innerHTML</code></h4>
+                <textarea id="html-input" class="form-control" rows="3"><strong>This is bold text.</strong><br><img src="invalid-url.jpg" onerror="alert('XSS Demo: This could be malicious code!')"></textarea>
+                <button id="render-html-button" class="btn btn-danger mt-2">Render HTML</button>
+                <div id="html-output" class="mt-2" style="border: 1px solid red; padding: 10px;"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; margin-top: 2rem; background: #333; color: white;">
+        <p>&copy; 2024 DevDashboard. All rights reserved.</p>
+        <p>A comprehensive example for dataset generation.</p>
+    </footer>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <!-- ~ PART 3: INLINE JAVASCRIPT (approx. 333 lines)   ~ -->
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <script>
+        // Wait for the DOM to be fully loaded before running scripts
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- MODULE 1: CORE AND THEME LOGIC ---
+            console.log("DOM fully loaded and parsed. Initializing scripts.");
+
+            const themeToggleButton = document.getElementById('theme-toggle');
+            themeToggleButton.addEventListener('click', function() {
+                document.body.classList.toggle('dark-theme');
+                // Persist theme preference
+                const isDarkMode = document.body.classList.contains('dark-theme');
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+                console.log(`Theme changed to ${isDarkMode ? 'dark' : 'light'}`);
+            });
+
+            // Check for saved theme preference
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+
+            // --- MODULE 2: DOM MANIPULATION ---
+            const domTargetBox = document.getElementById('dom-target-box');
+            const changeTextBtn = document.getElementById('change-text-btn');
+            const changeHtmlBtn = document.getElementById('change-html-btn');
+            const changeStyleBtn = document.getElementById('change-style-btn');
+            const addElementBtn = document.getElementById('add-element-btn');
+            const removeElementBtn = document.getElementById('remove-element-btn');
+            let newElementCounter = 0;
+
+            changeTextBtn.onclick = () => {
+                domTargetBox.textContent = `Text changed at ${new Date().toLocaleTimeString()}. This does not parse HTML.`;
+            };
+
+            changeHtmlBtn.onclick = () => {
+                domTargetBox.innerHTML = `<strong>HTML content changed!</strong><ul><li>Item 1</li><li>Item 2</li></ul>`;
+            };
+
+            changeStyleBtn.addEventListener('click', () => {
+                const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+                const randomPadding = Math.floor(Math.random() * 40) + 10;
+                domTargetBox.style.backgroundColor = randomColor;
+                domTargetBox.style.color = '#fff'; // Assuming dark random color background
+                domTargetBox.style.borderRadius = `${randomPadding/2}px`;
+                domTargetBox.style.padding = `${randomPadding}px`;
+                domTargetBox.style.transform = `rotate(${Math.floor(Math.random() * 10) - 5}deg)`;
+            });
+            
+            addElementBtn.addEventListener('click', () => {
+                const newP = document.createElement('p');
+                newP.textContent = `I am a newly added paragraph #${++newElementCounter}.`;
+                newP.className = 'dynamically-added';
+                domTargetBox.appendChild(newP);
+                removeElementBtn.disabled = false;
+            });
+            
+            removeElementBtn.addEventListener('click', () => {
+                const lastAdded = domTargetBox.querySelector('.dynamically-added:last-child');
+                if (lastAdded) {
+                    domTargetBox.removeChild(lastAdded);
+                    newElementCounter--;
+                }
+                if (domTargetBox.querySelectorAll('.dynamically-added').length === 0) {
+                    removeElementBtn.disabled = true;
+                }
+            });
+
+            // --- MODULE 3: FORM HANDLING AND DATA ---
+            const userProfileForm = document.getElementById('user-profile-form');
+            const formOutput = document.getElementById('form-output');
+            const subscribeCheckbox = document.getElementById('subscribe-checkbox');
+            const emailInput = document.getElementById('email');
+            
+            // Conditional validation logic
+            subscribeCheckbox.addEventListener('change', (e) => {
+                emailInput.required = e.target.checked;
+            });
+
+            // Range input display update
+            const userLevelInput = document.getElementById('user-level');
+            const userLevelDisplay = document.getElementById('user-level-display');
+            userLevelInput.addEventListener('input', (e) => {
+                userLevelDisplay.textContent = e.target.value;
+            });
+
+            userProfileForm.addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent actual form submission
+                
+                // Form validation check
+                if (!userProfileForm.checkValidity()) {
+                    formOutput.textContent = 'Please fix the errors in the form.';
+                    formOutput.style.color = 'red';
+                    userProfileForm.reportValidity(); // Show browser's validation UI
+                    return;
+                }
+
+                const formData = new FormData(userProfileForm);
+                const data = {};
+                // Using a for...of loop to iterate over FormData
+                for (let [key, value] of formData.entries()) {
+                    data[key] = value;
+                }
+
+                formOutput.style.color = 'black';
+                formOutput.textContent = JSON.stringify(data, null, 2);
+            });
+            
+            // --- MODULE 4: CANVAS ANIMATION ---
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+            let x = 50;
+            let y = 50;
+            let dx = 2;
+            let dy = 2;
+            let hue = 0;
+
+            function drawCanvas() {
+                // Clear the canvas with a semi-transparent fill to create a trail effect
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw a circle
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2, false);
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.fill();
+                ctx.closePath();
+                
+                // Draw text
+                ctx.font = '24px Arial';
+                ctx.fillStyle = 'black';
+                ctx.fillText('Canvas API', canvas.width - 150, 40);
+
+                // Bounce off walls
+                if (x + dx > canvas.width - 20 || x + dx < 20) {
+                    dx = -dx;
+                }
+                if (y + dy > canvas.height - 20 || y + dy < 20) {
+                    dy = -dy;
+                }
+
+                x += dx;
+                y += dy;
+                hue = (hue + 1) % 360;
+
+                // Request the next frame
+                requestAnimationFrame(drawCanvas);
+            }
+            drawCanvas(); // Start the animation loop
+
+            // --- MODULE 5: ASYNC OPERATIONS AND API FETCHING ---
+            const fetchDataBtn = document.getElementById('fetch-data-btn');
+            const apiResultDiv = document.getElementById('api-result');
+            
+            // Mock API fetch function
+            const mockFetchUsers = () => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        if (Math.random() > 0.1) { // 90% success rate
+                            resolve({
+                                status: 200,
+                                data: [
+                                    { id: 1, name: 'Alice', role: 'Admin' },
+                                    { id: 2, name: 'Bob', role: 'User' },
+                                    { id: 3, name: 'Charlie', role: 'Editor' },
+                                ]
+                            });
+                        } else {
+                            reject(new Error("Simulated network error. Please try again."));
+                        }
+                    }, 1000); // Simulate 1-second network delay
+                });
+            };
+
+            async function handleFetchData() {
+                apiResultDiv.textContent = 'Fetching data...';
+                fetchDataBtn.disabled = true;
+                try {
+                    const response = await mockFetchUsers();
+                    const users = response.data;
+                    apiResultDiv.innerHTML = '<h4>Users:</h4><pre>' + JSON.stringify(users, null, 2) + '</pre>';
+                } catch (error) {
+                    apiResultDiv.textContent = `Error: ${error.message}`;
+                    apiResultDiv.classList.add('text-danger');
+                } finally {
+                    fetchDataBtn.disabled = false;
+                }
+            }
+            fetchDataBtn.addEventListener('click', handleFetchData);
+            
+            // --- MODULE 6: OBJECT-ORIENTED PROGRAMMING (CLASSES) ---
+            class Widget {
+                constructor(name, version) {
+                    this.name = name;
+                    this._version = version; // private convention
+                    this.createdAt = new Date();
+                }
+
+                getInfo() {
+                    return `${this.name} (v${this._version}) created at ${this.createdAt.toLocaleTimeString()}`;
+                }
+                
+                static getWidgetType() {
+                    return "Generic UI Widget";
+                }
+            }
+
+            class InteractiveWidget extends Widget {
+                constructor(name, version, interactivityType) {
+                    super(name, version);
+                    this.interactivityType = interactivityType;
+                }
+                
+                // Override method
+                getInfo() {
+                    return `${super.getInfo()} - Type: ${this.interactivityType}`;
+                }
+            }
+
+            const genericWidget = new Widget('Logger', '1.0');
+            const buttonWidget = new InteractiveWidget('SubmitButton', '2.1', 'Click');
+            console.log(genericWidget.getInfo());
+            console.log(buttonWidget.getInfo());
+            console.log(Widget.getWidgetType());
+
+            // --- MODULE 7: ADVANCED JS & METAPROGRAMMING ---
+            // Using Map and Set
+            const userPermissions = new Map();
+            userPermissions.set(1, new Set(['read', 'write']));
+            userPermissions.set(2, new Set(['read']));
+            console.log('User 1 permissions:', userPermissions.get(1));
+
+            // Using Proxy for object observation
+            const userState = { name: 'Guest', loggedIn: false };
+            const userStateHandler = {
+                set: function(obj, prop, value) {
+                    console.log(`State changed: ${prop} from ${obj[prop]} to ${value}`);
+                    obj[prop] = value;
+                    return true;
+                }
+            };
+            const proxiedUserState = new Proxy(userState, userStateHandler);
+            proxiedUserState.name = 'Admin'; // This will trigger the console log in the handler
+
+            // Generator function
+            function* idGenerator() {
+                let id = 100;
+                while (true) {
+                    yield id++;
+                }
+            }
+            const gen = idGenerator();
+            console.log('Generated IDs:', gen.next().value, gen.next().value);
+
+            // --- MODULE 8: WEB COMPONENTS (CUSTOM ELEMENTS) ---
+            class UserCard extends HTMLElement {
+                constructor() {
+                    super();
+                    const template = document.getElementById('user-card-template').content;
+                    const shadowRoot = this.attachShadow({ mode: 'open' });
+                    shadowRoot.appendChild(template.cloneNode(true));
+                }
+                
+                connectedCallback() {
+                    // Update content based on attributes when element is connected to DOM
+                    const shadow = this.shadowRoot;
+                    const usernameSlot = shadow.querySelector('slot[name="username"]');
+                    const emailSlot = shadow.querySelector('slot[name="email"]');
+                    const image = shadow.querySelector('img');
+
+                    if (this.hasAttribute('name')) {
+                        usernameSlot.textContent = this.getAttribute('name');
+                    }
+                    if (this.hasAttribute('email')) {
+                        emailSlot.textContent = this.getAttribute('email');
+                    }
+                    if (this.hasAttribute('avatar')) {
+                        image.src = this.getAttribute('avatar');
+                    }
+                }
+            }
+            customElements.define('user-card', UserCard);
+            
+            // Dynamically create instances of the custom element
+            const customElementsContainer = document.getElementById('custom-elements-container');
+            customElementsContainer.innerHTML = ''; // Clear placeholder
+            const user1 = document.createElement('user-card');
+            user1.setAttribute('name', 'Dynamo Dan');
+            user1.setAttribute('email', 'dan@dynamic.com');
+            user1.setAttribute('avatar', 'https://i.pravatar.cc/70?u=dan');
+            
+            const user2 = document.createElement('user-card');
+            // This one will use default slot content for name and email
+            user2.setAttribute('avatar', 'https://i.pravatar.cc/70?u=default');
+
+            customElementsContainer.appendChild(user1);
+            customElementsContainer.appendChild(user2);
+            
+            // --- MODULE 9: "UNSAFE" CODE EXECUTION ---
+            const evalButton = document.getElementById('eval-button');
+            evalButton.addEventListener('click', () => {
+                const expression = document.getElementById('eval-input').value;
+                const resultSpan = document.getElementById('eval-result');
+                try {
+                    // WARNING: Using eval() is dangerous as it can execute arbitrary code.
+                    // This is for demonstration purposes only.
+                    const result = eval(expression);
+                    resultSpan.textContent = result;
+                    resultSpan.style.color = 'green';
+                } catch (e) {
+                    resultSpan.textContent = `Error: ${e.message}`;
+                    resultSpan.style.color = 'red';
+                }
+            });
+
+            const renderHtmlButton = document.getElementById('render-html-button');
+            renderHtmlButton.addEventListener('click', () => {
+                const htmlString = document.getElementById('html-input').value;
+                const outputDiv = document.getElementById('html-output');
+                // WARNING: Setting innerHTML with user-provided content can lead to
+                // Cross-Site Scripting (XSS) vulnerabilities. This is for demonstration.
+                outputDiv.innerHTML = htmlString;
+            });
+            
+        }); // End of DOMContentLoaded
+    </script>
+</body>
+</html>

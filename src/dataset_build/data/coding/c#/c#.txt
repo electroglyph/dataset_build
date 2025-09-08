@@ -1,0 +1,828 @@
+/*
+ * =====================================================================================
+ *
+ *       Filename:  ComprehensiveCSharpShowcase.cs
+ *
+ *    Description:  A single-file C# project to generate a varied dataset for LLM training.
+ *                  This file demonstrates a wide range of C# language features.
+ *
+ *        Version:  1.0
+ *        Created:  [Current Date]
+ *       Compiler:  .NET 8 SDK
+ *
+ * =====================================================================================
+ */
+
+#nullable enable // Enable Nullable Reference Types for the entire file
+
+#define DEMO_MODE
+#define ADVANCED_FEATURES
+
+// --- NAMESPACE IMPORTS ---
+// Standard library namespaces
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
+// --- TOP-LEVEL STATEMENTS (C# 9+) ---
+// Application Entry Point
+Console.Title = "C# Comprehensive Feature Showcase";
+Console.WriteLine("--- Starting Comprehensive C# Showcase Application ---");
+
+var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (s, e) =>
+{
+    Console.WriteLine("Cancellation requested...");
+    cts.Cancel();
+    e.Cancel = true;
+};
+
+try
+{
+    await ComprehensiveCSharpDemo.MainApplication.RunAsync(cts.Token);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("\nApplication was canceled gracefully.");
+}
+catch (Exception ex)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine($"\nAn unhandled exception occurred: {ex.Message}");
+    Console.ResetColor();
+    // Return a non-zero exit code to indicate failure
+    Environment.ExitCode = 1; 
+}
+finally
+{
+    Console.WriteLine("\n--- Application Execution Finished ---");
+}
+
+
+// --- MAIN NAMESPACE FOR THE DEMO APPLICATION ---
+namespace ComprehensiveCSharpDemo
+{
+    // --- ENUMS ---
+    public enum UserRole
+    {
+        Guest,
+        User,
+        Moderator,
+        Administrator
+    }
+
+    public enum LogLevel
+    {
+        Verbose,
+        Info,
+        Warning,
+        Error,
+        Critical
+    }
+
+    // --- CUSTOM ATTRIBUTES (METAPROGRAMMING) ---
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    public class ConfigurableSettingAttribute(string settingName) : Attribute
+    {
+        public string SettingName { get; } = settingName;
+        public object? DefaultValue { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+    public class AuthorInfoAttribute(string author) : Attribute
+    {
+        public string Author { get; } = author;
+        public string Version { get; set; } = "1.0";
+    }
+
+    // --- STRUCTS (VALUE TYPES) ---
+    [AuthorInfo("AI Assistant", Version = "1.1")]
+    public readonly struct Point2D(double x, double y)
+    {
+        public double X { get; } = x;
+        public double Y { get; } = y;
+
+        public double DistanceTo(Point2D other)
+        {
+            double dx = X - other.X;
+            double dy = Y - other.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        public override string ToString() => $"({X}, {Y})";
+
+        // Operator overloading
+        public static Point2D operator +(Point2D a, Point2D b) => new(a.X + b.X, a.Y + b.Y);
+        public static Point2D operator *(Point2D p, double scalar) => new(p.X * scalar, p.Y * scalar);
+    }
+
+    // --- RECORDS (REFERENCE OR VALUE TYPES WITH VALUE-BASED EQUALITY) ---
+    public record Person(int Id, string FirstName, string LastName, int Age, UserRole Role);
+
+    // Record struct for demonstrating value-type records
+    public readonly record struct GeoLocation(double Latitude, double Longitude);
+
+    // --- INTERFACES ---
+    public interface ILogger
+    {
+        void Log(LogLevel level, string message);
+    }
+
+    public interface IDataService<T> where T : class
+    {
+        Task<IEnumerable<T>> FetchDataAsync(CancellationToken cancellationToken);
+    }
+    
+    // Covariant interface example
+    public interface IProducer<out T>
+    {
+        T Produce();
+    }
+
+    // Contravariant interface example
+    public interface IConsumer<in T>
+    {
+        void Consume(T item);
+    }
+
+    // --- ABSTRACT CLASSES ---
+    public abstract class Vehicle
+    {
+        public int Year { get; protected set; }
+        public string Make { get; protected set; } = string.Empty;
+
+        public abstract int MaxSpeed { get; }
+
+        public virtual void StartEngine()
+        {
+            Console.WriteLine("Engine started.");
+        }
+
+        public abstract void DisplayInfo();
+    }
+
+    // --- CONCRETE CLASSES ---
+
+    // Inheritance and Polymorphism
+    public class Car : Vehicle
+    {
+        public int NumberOfDoors { get; }
+
+        public Car(string make, int year, int doors)
+        {
+            Make = make;
+            Year = year;
+            NumberOfDoors = doors;
+        }
+
+        public override int MaxSpeed => 120; // miles per hour
+
+        public override void StartEngine()
+        {
+            base.StartEngine();
+            Console.WriteLine("Car engine purring.");
+        }
+
+        public sealed override void DisplayInfo() // `sealed` prevents further overriding
+        {
+            Console.WriteLine($"Car: {Year} {Make}, {NumberOfDoors} doors. Max speed: {MaxSpeed} mph.");
+        }
+    }
+    
+    public class SimpleProducer : IProducer<object>
+    {
+        public object Produce() => "Hello World";
+    }
+
+    public class StringConsumer : IConsumer<string>
+    {
+        public void Consume(string item) => Console.WriteLine($"Consumed: {item}");
+    }
+    
+    // Implementing an interface
+    public class ConsoleLogger : ILogger
+    {
+        private static readonly object _lock = new();
+
+        public void Log(LogLevel level, string message)
+        {
+            lock (_lock)
+            {
+                Console.ForegroundColor = level switch
+                {
+                    LogLevel.Verbose => ConsoleColor.Gray,
+                    LogLevel.Info => ConsoleColor.White,
+                    LogLevel.Warning => ConsoleColor.Yellow,
+                    LogLevel.Error or LogLevel.Critical => ConsoleColor.Red,
+                    _ => ConsoleColor.White,
+                };
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [{level.ToString().ToUpper()}]: {message}");
+                Console.ResetColor();
+            }
+        }
+    }
+
+    // Class with IDisposable for resource management
+    public class FileManager : IDisposable
+    {
+        private readonly StreamWriter? _writer;
+        private bool _disposed = false;
+
+        public FileManager(string filePath)
+        {
+            // This might throw exceptions, which is fine for a demo
+            _writer = new StreamWriter(filePath, append: true, Encoding.UTF8);
+            Console.WriteLine($"Opened file for writing: {filePath}");
+        }
+
+        public void WriteLine(string text)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(FileManager));
+            _writer?.WriteLine(text);
+        }
+
+        // IDisposable implementation
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    _writer?.Dispose();
+                    Console.WriteLine("FileManager disposed of managed resources.");
+                }
+                // Dispose unmanaged resources here if any
+                _disposed = true;
+            }
+        }
+
+        // Finalizer (destructor syntax)
+        ~FileManager()
+        {
+            Dispose(false);
+        }
+    }
+
+    // Generic class with constraints
+    public class GenericCache<TKey, TValue> 
+        where TKey : notnull, IComparable<TKey>
+        where TValue : class, new()
+    {
+        private readonly Dictionary<TKey, TValue> _cache = new();
+        private readonly int _maxSize;
+
+        public GenericCache(int maxSize = 100)
+        {
+            _maxSize = maxSize;
+        }
+
+        public TValue? Get(TKey key)
+        {
+            _cache.TryGetValue(key, out TValue? value);
+            return value;
+        }
+
+        public void Add(TKey key, TValue value)
+        {
+            if (_cache.Count >= _maxSize)
+            {
+                // Simple eviction strategy: remove first item
+                _cache.Remove(_cache.Keys.First());
+            }
+            _cache[key] = value;
+        }
+
+        // Indexer
+        public TValue this[TKey key]
+        {
+            get => Get(key) ?? throw new KeyNotFoundException();
+            set => Add(key, value);
+        }
+    }
+
+    // Service class for fetching data from a web API
+    public class JsonPlaceholderService : IDataService<Person>
+    {
+        private readonly HttpClient _httpClient;
+        private readonly ILogger _logger;
+
+        // Using dependency injection pattern
+        public JsonPlaceholderService(HttpClient httpClient, ILogger logger)
+        {
+            _httpClient = httpClient;
+            _logger = logger;
+            _httpClient.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+        }
+
+        // Async/await for I/O-bound operation
+        public async Task<IEnumerable<Person>> FetchDataAsync(CancellationToken cancellationToken)
+        {
+            _logger.Log(LogLevel.Info, "Fetching user data from JSONPlaceholder API...");
+            try
+            {
+                var response = await _httpClient.GetAsync("users", cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var jsonString = await response.Content.ReadAsStringAsync(cancellationToken);
+                var users = JsonSerializer.Deserialize<List<JsonUser>>(jsonString);
+
+                if (users == null)
+                {
+                    _logger.Log(LogLevel.Warning, "API returned null or empty user list.");
+                    return Enumerable.Empty<Person>();
+                }
+                
+                _logger.Log(LogLevel.Info, $"Successfully fetched {users.Count} users.");
+
+                // Projecting from API model to our domain model
+                var random = new Random();
+                return users.Select(u => new Person(
+                    u.id,
+                    u.name.Split(' ')[0],
+                    u.name.Split(' ').LastOrDefault() ?? "",
+                    random.Next(20, 60),
+                    (UserRole)(u.id % 4)
+                ));
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.Log(LogLevel.Error, $"Network error fetching data: {ex.Message}");
+                throw; // Re-throw to be handled by the caller
+            }
+        }
+
+        // Private record for deserializing the API response
+        private record JsonUser(int id, string name, string username, string email);
+    }
+    
+    // --- DELEGATES and EVENTS ---
+    public class DataProcessor
+    {
+        // Delegate definition
+        public delegate void ProgressUpdateHandler(int percentageComplete, string status);
+
+        // Event based on the delegate
+        public event ProgressUpdateHandler? OnProgressUpdate;
+        
+        // Another way to declare an event using EventHandler<T>
+        public event EventHandler<string>? OnProcessingComplete;
+
+        public async Task<List<Person>> ProcessUsers(IEnumerable<Person> people)
+        {
+            var personList = people.ToList();
+            var total = personList.Count;
+            var processed = new List<Person>();
+
+            for (int i = 0; i < total; i++)
+            {
+                // Simulate some work
+                await Task.Delay(50); 
+                
+                processed.Add(personList[i]);
+
+                // Raise the progress update event
+                int percentage = (int)((i + 1) / (double)total * 100);
+                OnProgressUpdate?.Invoke(percentage, $"Processing user {personList[i].FirstName}...");
+            }
+            
+            // Raise the completion event
+            OnProcessingComplete?.Invoke(this, $"Processing complete. {processed.Count} users processed.");
+            return processed;
+        }
+    }
+
+
+    // --- METAPROGRAMMING & REFLECTION EXAMPLE ---
+    public static class ConfigurationInspector
+    {
+        public static void InspectAndPrint(object configObject)
+        {
+            Console.WriteLine($"\n--- Inspecting Configuration for '{configObject.GetType().Name}' ---");
+
+            var type = configObject.GetType();
+
+            // Check for class-level attributes
+            var authorAttr = type.GetCustomAttribute<AuthorInfoAttribute>();
+            if (authorAttr != null)
+            {
+                Console.WriteLine($"[Authored by: {authorAttr.Author}, Version: {authorAttr.Version}]");
+            }
+            
+            // Inspect properties for our custom attribute
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                 .Where(p => p.IsDefined(typeof(ConfigurableSettingAttribute)));
+
+            foreach (var prop in properties)
+            {
+                var attr = prop.GetCustomAttribute<ConfigurableSettingAttribute>();
+                var value = prop.GetValue(configObject);
+
+                if (attr != null)
+                {
+                    Console.WriteLine($"  - Setting: '{attr.SettingName}', Current Value: '{value ?? "null"}', Default: '{attr.DefaultValue ?? "n/a"}'");
+                }
+            }
+            Console.WriteLine("--- Inspection Complete ---");
+        }
+    }
+
+    // A sample configuration class to be inspected
+    public class AppSettings
+    {
+        [ConfigurableSetting("Server.Address", DefaultValue = "localhost")]
+        public string ServerAddress { get; set; } = "127.0.0.1";
+
+        [ConfigurableSetting("Server.Port")]
+        public int Port { get; set; } = 8080;
+
+        [ConfigurableSetting("Enable.SSL", DefaultValue = false)]
+        public bool EnableSsl { get; set; }
+
+        public string NonConfigurableProperty { get; set; } = "Should not be displayed";
+    }
+
+    // --- ADVANCED & LOW-LEVEL FEATURES ---
+#if ADVANCED_FEATURES
+    public static class LowLevelUtilities
+    {
+        // --- 1. Platform Invocation (P/Invoke) ---
+        // Importing a function from a native Windows library
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool Beep(uint dwFreq, uint dwDuration);
+
+        public static void PlayWindowsBeep()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.WriteLine("\nPlaying a beep using P/Invoke...");
+                Beep(880, 200); // A4 note
+                Thread.Sleep(50);
+                Beep(1047, 300); // C6 note
+            }
+            else
+            {
+                Console.WriteLine("\nSkipping P/Invoke Beep (not on Windows).");
+            }
+        }
+
+        // --- 2. Unsafe Code and Pointers ---
+        public static unsafe void DemonstrateUnsafeCode()
+        {
+            Console.WriteLine("\n--- Demonstrating Unsafe Code ---");
+            int x = 10;
+            int y = 20;
+
+            Console.WriteLine($"Before swap: x = {x}, y = {y}");
+
+            // We need a pointer to pass to the unsafe method
+            int* pX = &x;
+            int* pY = &y;
+            
+            Swap(pX, pY);
+
+            Console.WriteLine($"After swap:  x = {x}, y = {y}");
+
+            // --- 3. Stack Allocation ---
+            // Allocate an array on the stack for performance
+            Span<int> numbers = stackalloc int[10];
+            Console.WriteLine("Populating a stack-allocated Span<int>...");
+            for (int i = 0; i < numbers.Length; i++)
+            {
+                numbers[i] = i * i;
+            }
+            
+            foreach (var num in numbers)
+            {
+                Console.Write($"{num} ");
+            }
+            Console.WriteLine("\n--- Unsafe Code Demo Finished ---");
+        }
+
+        // An unsafe method that manipulates memory directly via pointers
+        private static unsafe void Swap(int* first, int* second)
+        {
+            int temp = *first;
+            *first = *second;
+            *second = temp;
+        }
+        
+        // --- 4. Using C# 11 required members ---
+        public class RequiredMembersDemo
+        {
+            public required string Name { get; set; }
+            public int Age { get; set; } // Not required
+        }
+        
+        public static void DemonstrateRequiredMembers()
+        {
+             // This line would cause a compile error:
+             // var demo = new RequiredMembersDemo(); // Error: Required member 'Name' must be set.
+             
+             // This is the correct way, using an object initializer
+             var demo = new RequiredMembersDemo { Name = "Alice" };
+             Console.WriteLine($"\nRequired member 'Name' is set to: {demo.Name}");
+        }
+    }
+#endif
+
+    // --- EXTENSION METHODS ---
+    public static class StringExtensions
+    {
+        public static int WordCount(this string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+                return 0;
+            return str.Split(new char[] { ' ', '.', '?', '!' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+
+        public static string ToTitleCase(this string str, CultureInfo? culture = null)
+        {
+            culture ??= CultureInfo.CurrentCulture;
+            return culture.TextInfo.ToTitleCase(str.ToLower(culture));
+        }
+    }
+
+    // --- PATTERN MATCHING SHOWCASE ---
+    public static class PatternMatchingShowcase
+    {
+        public static string AnalyzeObject(object obj)
+        {
+            // C# 9+ switch expression with various patterns
+            return obj switch
+            {
+                // Constant pattern
+                null => "It's a null object.",
+                
+                // Type pattern
+                int i => $"It's an integer with value {i}.",
+                string s => $"It's a string with length {s.Length}.",
+
+                // Relational patterns (C# 9)
+                Person { Age: < 18 } p => $"{p.FirstName} is a minor.",
+                Person { Age: >= 18 and <= 65 } p => $"{p.FirstName} is an adult.",
+                Person { Age: > 65 } p => $"{p.FirstName} is a senior.",
+                
+                // Property pattern with nested pattern
+                Car { Make: "Ford", Year: > 2020 } => "It's a new Ford car.",
+
+                // Logical patterns (not, and, or)
+                not Point2D => "It's not a Point2D.",
+                
+                // Tuple pattern
+                (int x, int y) when x == y => $"It's a tuple with equal values ({x}, {y}).",
+                (int x, int y) => $"It's a tuple with values ({x}, {y}).",
+
+                // List patterns (C# 11)
+                int[] { 1, 2, 3 } => "It's the integer array [1, 2, 3].",
+                int[] { 1, .. } => "It's an integer array starting with 1.",
+                string[] { var first, .. var rest } => $"A string array starting with '{first}' and having {rest.Length} more elements.",
+
+                // Default (discard) pattern
+                _ => "It's some other type of object."
+            };
+        }
+    }
+    
+    // --- MAIN APPLICATION LOGIC ---
+    public static class MainApplication
+    {
+        public static async Task RunAsync(CancellationToken cancellationToken)
+        {
+            // --- SETUP ---
+            var logger = new ConsoleLogger();
+            
+            // Using a `using` declaration for IDisposable HttpClient
+            using var httpClient = new HttpClient();
+            var dataService = new JsonPlaceholderService(httpClient, logger);
+            var logFilePath = Path.Combine(Path.GetTempPath(), "csharp_showcase_log.txt");
+
+            // --- 1. DELEGATES AND EVENTS ---
+            logger.Log(LogLevel.Info, "Demonstrating Delegates and Events.");
+            var processor = new DataProcessor();
+
+            // Subscribing to an event with a lambda expression
+            processor.OnProgressUpdate += (percentage, status) => 
+            {
+                Console.Write($"\rProgress: {percentage}% - {status}".PadRight(Console.WindowWidth - 1));
+            };
+            
+            // Subscribing to another event with a method group
+            processor.OnProcessingComplete += HandleProcessingComplete;
+
+
+            // --- 2. ASYNC/AWAIT AND DATA FETCHING ---
+            var people = (await dataService.FetchDataAsync(cancellationToken)).ToList();
+            var processedPeople = await processor.ProcessUsers(people);
+            Console.WriteLine(); // New line after progress bar
+
+            if (!processedPeople.Any())
+            {
+                logger.Log(LogLevel.Warning, "No data to process. Exiting some demonstrations.");
+                return;
+            }
+
+
+            // --- 3. LINQ (LANGUAGE INTEGRATED QUERY) ---
+            logger.Log(LogLevel.Info, "\n--- Demonstrating LINQ ---");
+
+            // a) Method Syntax
+            var adminsOver30 = processedPeople
+                .Where(p => p.Role == UserRole.Administrator && p.Age > 30)
+                .OrderByDescending(p => p.Age)
+                .Select(p => new { FullName = $"{p.FirstName} {p.LastName}", p.Age });
+            
+            Console.WriteLine("Administrators over 30 (Method Syntax):");
+            foreach (var admin in adminsOver30)
+            {
+                Console.WriteLine($"  - {admin.FullName}, Age: {admin.Age}");
+            }
+
+            // b) Query Syntax
+            var usersByNameQuery =
+                from p in processedPeople
+                where p.Role == UserRole.User
+                orderby p.LastName, p.FirstName
+                group p by p.LastName[0] into nameGroup
+                select nameGroup;
+
+            Console.WriteLine("\nUsers grouped by first letter of last name (Query Syntax):");
+            foreach (var group in usersByNameQuery.OrderBy(g => g.Key))
+            {
+                Console.WriteLine($" - Group {group.Key}:");
+                foreach (var person in group)
+                {
+                    Console.WriteLine($"   - {person.LastName}, {person.FirstName}");
+                }
+            }
+
+            // c) Aggregation
+            double averageAge = processedPeople.Average(p => p.Age);
+            logger.Log(LogLevel.Info, $"Average user age: {averageAge:F2}");
+
+
+            // --- 4. FILE I/O AND IDISPOSABLE ---
+            logger.Log(LogLevel.Info, $"Demonstrating File I/O. Writing log to {logFilePath}");
+            try
+            {
+                // `using` statement ensures Dispose is called even if exceptions occur
+                using (var fileManager = new FileManager(logFilePath))
+                {
+                    fileManager.WriteLine($"Log entry at {DateTime.UtcNow:O}");
+                    fileManager.WriteLine($"Processed {processedPeople.Count} users.");
+                    fileManager.WriteLine($"Average age was {averageAge:F2}.");
+                }
+            }
+            catch (IOException ex)
+            {
+                logger.Log(LogLevel.Error, $"File I/O Error: {ex.Message}");
+            }
+
+
+            // --- 5. METAPROGRAMMING & REFLECTION ---
+            var appSettings = new AppSettings { EnableSsl = true };
+            ConfigurationInspector.InspectAndPrint(appSettings);
+
+
+            // --- 6. EXTENSION METHODS ---
+            string sentence = "this is a sample sentence to test extension methods.";
+            Console.WriteLine($"\n--- Demonstrating Extension Methods ---");
+            Console.WriteLine($"Original: '{sentence}'");
+            Console.WriteLine($"Word count: {sentence.WordCount()}");
+            Console.WriteLine($"Title-cased: '{sentence.ToTitleCase()}'");
+
+
+            // --- 7. OPERATOR OVERLOADING & STRUCTS ---
+            var p1 = new Point2D(3, 4);
+            var p2 = new Point2D(1, 2);
+            var p3 = p1 + p2;
+            var p4 = p1 * 2.5;
+            Console.WriteLine("\n--- Demonstrating Operator Overloading ---");
+            Console.WriteLine($"{p1} + {p2} = {p3}");
+            Console.WriteLine($"{p1} * 2.5 = {p4}");
+
+            
+            // --- 8. GENERICS ---
+            var personCache = new GenericCache<int, Person>();
+            var firstPerson = processedPeople.First();
+            personCache.Add(firstPerson.Id, firstPerson);
+            var cachedPerson = personCache.Get(firstPerson.Id);
+            Console.WriteLine("\n--- Demonstrating Generic Class ---");
+            Console.WriteLine($"Cached person by ID {firstPerson.Id}: {cachedPerson?.FirstName}");
+
+            
+            // --- 9. PATTERN MATCHING ---
+            Console.WriteLine("\n--- Demonstrating Pattern Matching ---");
+            var objectsToTest = new List<object?>
+            {
+                42,
+                "hello world",
+                new Person(101, "Jane", "Doe", 17, UserRole.Guest),
+                new Person(102, "John", "Smith", 45, UserRole.Administrator),
+                new Car("Ford", 2022, 4),
+                new Point2D(0,0),
+                null,
+                (10, 20),
+                (5, 5),
+                new int[] { 1, 9, 8, 4 },
+                new string[] { "alpha", "beta", "gamma" }
+            };
+
+            foreach(var obj in objectsToTest)
+            {
+                Console.WriteLine($"Input: {obj?.ToString() ?? "null"} -> Output: {PatternMatchingShowcase.AnalyzeObject(obj)}");
+            }
+            
+
+#if ADVANCED_FEATURES && DEMO_MODE
+            // --- 10. UNWSAFE CODE AND P/INVOKE ---
+            LowLevelUtilities.PlayWindowsBeep();
+            
+            // Unsafe code must be explicitly allowed in project settings.
+            // This demonstrates the syntax.
+            try
+            {
+                LowLevelUtilities.DemonstrateUnsafeCode();
+                LowLevelUtilities.DemonstrateRequiredMembers();
+            }
+            catch(Exception ex)
+            {
+                logger.Log(LogLevel.Error, $"Error in low-level utilities: {ex.Message}");
+            }
+#endif
+            
+            // --- 11. VARIANCE (COVARIANCE AND CONTRAVARIANCE) ---
+            Console.WriteLine("\n--- Demonstrating Variance ---");
+            // Covariance: IProducer<string> can be assigned to IProducer<object>
+            IProducer<string> stringProducer = new SimpleProducer();
+            IProducer<object> objectProducer = stringProducer;
+            Console.WriteLine($"Covariance example produced: {objectProducer.Produce()}");
+
+            // Contravariance: IConsumer<object> can be assigned to IConsumer<string>
+            IConsumer<object> objectConsumer = new StringConsumer();
+            IConsumer<string> stringConsumer = objectConsumer;
+            stringConsumer.Consume("Hello from contravariance!");
+            
+            
+            // --- 12. TASK PARALLEL LIBRARY (TPL) for CPU-bound work ---
+            Console.WriteLine("\n--- Demonstrating TPL for parallel computation ---");
+            var numbers = Enumerable.Range(1, 10_000_000).ToArray();
+            var sw = Stopwatch.StartNew();
+
+            long sumOfSquares = 0;
+            // Using Parallel.For for data parallelism
+            Parallel.For(0, numbers.Length, 
+                () => 0L, // localInit: initialize a thread-local sum
+                (i, loopState, localSum) => // body: perform calculation
+                {
+                    localSum += (long)numbers[i] * numbers[i];
+                    return localSum;
+                },
+                (localSum) => Interlocked.Add(ref sumOfSquares, localSum) // localFinally: aggregate results
+            );
+            
+            sw.Stop();
+            Console.WriteLine($"Parallel sum of squares: {sumOfSquares} (calculated in {sw.ElapsedMilliseconds}ms)");
+
+            // The same calculation with PLINQ
+            sw.Restart();
+            long plinqSum = numbers.AsParallel()
+                                 .Select(n => (long)n * n)
+                                 .Sum();
+            sw.Stop();
+            Console.WriteLine($"PLINQ sum of squares:    {plinqSum} (calculated in {sw.ElapsedMilliseconds}ms)");
+        }
+
+        private static void HandleProcessingComplete(object? sender, string message)
+        {
+            if(sender is DataProcessor)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\n[EVENT RECEIVED]: {message}");
+                Console.ResetColor();
+            }
+        }
+    }
+}

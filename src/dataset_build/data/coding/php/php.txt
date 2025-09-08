@@ -1,0 +1,830 @@
+<?php
+
+/**
+ * A comprehensive PHP script demonstrating a wide variety of language features.
+ * This file is intended for use in a dataset to train a language model's
+ * understanding of the PHP programming language.
+ *
+ * @version 1.0
+ * @author AI Language Model
+ * @license MIT
+ */
+
+// Strict type declaration is a good practice in modern PHP.
+declare(strict_types=1);
+
+// -----------------------------------------------------------------------------
+// 1. VARIABLES, DATA TYPES, AND TYPE CASTING
+// -----------------------------------------------------------------------------
+echo "--- Section 1: Variables and Data Types ---\n";
+
+// Scalar Types
+$integerVar = 1024;
+$floatVar = 3.14159;
+$stringVar = "Hello, PHP!";
+$boolVar = true;
+$nullVar = null;
+
+// String variations
+$singleQuoted = 'This string does not parse variables like $integerVar.';
+$doubleQuoted = "This string parses variables: The value is $integerVar.";
+
+$heredoc = <<<EOT
+This is a heredoc string.
+It can span multiple lines and also parses variables like {$integerVar}.
+The terminating identifier (EOT) must be on its own line.
+EOT;
+
+$nowdoc = <<<'EOT'
+This is a nowdoc string, the single-quoted version of a heredoc.
+It does not parse variables like $integerVar.
+The syntax is very similar.
+EOT;
+
+// Type Casting
+$stringNumber = "123.45";
+$castedFloat = (float) $stringNumber;
+$castedInt = (int) $castedFloat;
+$castedString = (string) $castedInt;
+$castedArray = (array) $castedString;
+$castedObject = (object) $castedArray;
+
+// Outputting some variable info
+var_dump($integerVar, $floatVar, $stringVar, $boolVar, $nullVar);
+print_r([
+    'singleQuoted' => $singleQuoted,
+    'doubleQuoted' => $doubleQuoted,
+    'heredoc' => $heredoc,
+    'nowdoc' => $nowdoc
+]);
+var_dump($castedObject);
+
+// -----------------------------------------------------------------------------
+// 2. ARRAYS
+// -----------------------------------------------------------------------------
+echo "\n--- Section 2: Arrays ---\n";
+
+// Indexed array (classic and modern syntax)
+$indexedArrayOld = array('apple', 'banana', 'cherry');
+$indexedArrayNew = ['dragonfruit', 'elderberry', 'fig'];
+
+// Associative array
+$assocArray = [
+    'name' => 'John Doe',
+    'age' => 34,
+    'isStudent' => false,
+    'courses' => ['History', 'Math', 'Science']
+];
+
+// Multi-dimensional array
+$matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+];
+
+// Accessing array elements
+echo "First fruit: " . $indexedArrayOld[0] . "\n";
+echo "John's age: " . $assocArray['age'] . "\n";
+echo "Matrix center: " . $matrix[1][1] . "\n";
+
+// Array manipulation
+array_push($indexedArrayNew, 'grape'); // Add to end
+$lastFruit = array_pop($indexedArrayNew); // Remove from end
+
+// Array destructuring (PHP 7.1+)
+['name' => $name, 'age' => $age] = $assocArray;
+echo "Destructured: Name is $name, Age is $age\n";
+
+// List syntax (older destructuring)
+list($a, $b, $c) = $indexedArrayOld;
+echo "List: $a, $b, $c\n";
+
+// Spread operator in arrays (PHP 7.4+)
+$mergedFruits = [...$indexedArrayOld, ...$indexedArrayNew, 'honeydew'];
+print_r($mergedFruits);
+
+// Useful array functions
+echo "Number of fruits: " . count($mergedFruits) . "\n";
+echo "Keys of assocArray: " . implode(', ', array_keys($assocArray)) . "\n";
+echo "Values of assocArray: " . implode(', ', array_values($assocArray)) . "\n";
+
+// array_map: Apply a callback to each element
+$numbers = [1, 2, 3, 4, 5];
+$squares = array_map(fn($n) => $n * $n, $numbers);
+echo "Squares: " . implode(', ', $squares) . "\n";
+
+// array_filter: Filter elements using a callback
+$evens = array_filter($numbers, fn($n) => $n % 2 === 0);
+echo "Evens: " . implode(', ', $evens) . "\n";
+
+// array_reduce: Reduce an array to a single value
+$sum = array_reduce($numbers, fn($carry, $item) => $carry + $item, 0);
+echo "Sum: $sum\n";
+
+// Sorting
+sort($mergedFruits); // Sorts in place
+print_r($mergedFruits);
+
+
+// -----------------------------------------------------------------------------
+// 3. CONTROL STRUCTURES
+// -----------------------------------------------------------------------------
+echo "\n--- Section 3: Control Structures ---\n";
+
+// if, elseif, else
+$score = 85;
+if ($score > 90) {
+    echo "Grade: A\n";
+} elseif ($score > 80) {
+    echo "Grade: B\n";
+} else {
+    echo "Grade: C or lower\n";
+}
+
+// Ternary operator
+$isLoggedIn = false;
+$userStatus = $isLoggedIn ? 'Logged In' : 'Logged Out';
+echo "User Status: $userStatus\n";
+
+// Null coalescing operator (PHP 7.0+)
+$username = $_GET['user'] ?? 'guest';
+echo "Username: $username\n";
+
+// Null coalescing assignment operator (PHP 7.4+)
+$config['setting'] = $config['setting'] ?? 'default_value';
+
+// switch statement
+$day = 'Wednesday';
+switch ($day) {
+    case 'Monday':
+        echo "Start of the work week.\n";
+        break;
+    case 'Wednesday':
+        echo "Hump day!\n";
+        break;
+    case 'Friday':
+        echo "TGIF!\n";
+        break;
+    default:
+        echo "It's another day.\n";
+}
+
+// match expression (PHP 8.0+) - stricter than switch
+$httpStatusCode = 200;
+$statusMessage = match ($httpStatusCode) {
+    200, 201 => 'Success',
+    404 => 'Not Found',
+    500 => 'Server Error',
+    default => 'Unknown Status',
+};
+echo "HTTP Status: $statusMessage\n";
+
+// for loop
+for ($i = 0; $i < 3; $i++) {
+    echo "For loop iteration: $i\n";
+}
+
+// while loop
+$j = 0;
+while ($j < 3) {
+    echo "While loop iteration: $j\n";
+    $j++;
+}
+
+// do-while loop
+$k = 0;
+do {
+    echo "Do-while loop iteration: $k\n";
+    $k++;
+} while ($k < 0); // Note: This runs once even though condition is false
+
+// foreach loop
+foreach ($assocArray as $key => $value) {
+    if (is_array($value)) {
+        $value = implode(', ', $value);
+    }
+    echo "Foreach: $key is $value\n";
+}
+
+
+// -----------------------------------------------------------------------------
+// 4. FUNCTIONS
+// -----------------------------------------------------------------------------
+echo "\n--- Section 4: Functions ---\n";
+
+// Basic function with typed arguments and return type
+function add(int $a, int $b): int
+{
+    return $a + $b;
+}
+echo "add(5, 10) = " . add(5, 10) . "\n";
+
+// Function with default parameter value
+function greet(string $name = 'World'): string
+{
+    return "Hello, $name!";
+}
+echo greet() . "\n";
+echo greet('Alice') . "\n";
+
+// Function with pass-by-reference
+function increment(int &$value): void
+{
+    $value++;
+}
+$counter = 10;
+increment($counter);
+echo "Counter after increment: $counter\n";
+
+// Variadic function (PHP 5.6+)
+function sumVariadic(int ...$numbers): int
+{
+    return array_sum($numbers);
+}
+echo "sumVariadic(1, 2, 3, 4) = " . sumVariadic(1, 2, 3, 4) . "\n";
+
+// Anonymous function (closure)
+$multiplier = function ($x) use ($integerVar) {
+    // $integerVar is inherited from the parent scope
+    return $x * 2 + $integerVar;
+};
+echo "Closure result: " . $multiplier(5) . "\n";
+
+// Arrow function (PHP 7.4+) - concise closures
+$arrowMultiplier = fn($x) => $x * 2;
+echo "Arrow function result: " . $arrowMultiplier(5) . "\n";
+
+// Generator function using yield
+function numberRange(int $start, int $end): Generator
+{
+    for ($i = $start; $i <= $end; $i++) {
+        // yield pauses execution and returns a value
+        yield $i;
+    }
+}
+
+echo "Generator output: ";
+foreach (numberRange(1, 5) as $num) {
+    echo "$num ";
+}
+echo "\n";
+
+
+// -----------------------------------------------------------------------------
+// 5. NAMESPACES, CLASSES, AND OBJECT-ORIENTED PROGRAMMING (OOP)
+// -----------------------------------------------------------------------------
+echo "\n--- Section 5: OOP ---\n";
+
+// Use of namespaces to prevent name collisions
+namespace MyCoolApp\Model;
+
+// An attribute class (PHP 8.0+)
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD)]
+class Route
+{
+    public function __construct(public string $path, public string $method = 'GET') {}
+}
+
+// An interface defining a contract
+interface Loggable
+{
+    public function getLogMessage(): string;
+}
+
+// A trait for reusable code
+trait Timestampable
+{
+    private \DateTime $createdAt;
+
+    public function getCreatedAt(): \DateTime
+    {
+        return $this->createdAt;
+    }
+
+    protected function initializeTimestamp(): void
+    {
+        $this->createdAt = new \DateTime();
+    }
+}
+
+// An abstract base class
+#[Route("/base")]
+abstract class Entity
+{
+    // protected property
+    protected int $id;
+
+    // A static property
+    public static int $count = 0;
+
+    // Constructor with property promotion (PHP 8.0+)
+    public function __construct(protected string $uuid)
+    {
+        self::$count++;
+        $this->id = random_int(1000, 9999);
+    }
+
+    // Abstract method that must be implemented by child classes
+    abstract public function getEntityType(): string;
+
+    // A final method that cannot be overridden
+    final public function getUuid(): string
+    {
+        return $this->uuid;
+    }
+
+    // A static method
+    public static function getEntityCount(): int
+    {
+        return self::$count;
+    }
+}
+
+// A concrete class extending the abstract class and implementing an interface
+#[Route("/users", method: "POST")]
+class User extends Entity implements Loggable
+{
+    use Timestampable; // Using a trait
+
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_USER = 'user';
+
+    // private property
+    private string $passwordHash;
+
+    // readonly property (PHP 8.1+)
+    public readonly string $username;
+
+    public function __construct(
+        string $uuid,
+        string $username,
+        private string $email, // Property promotion
+        string $password
+    ) {
+        parent::__construct($uuid);
+        $this->username = $username;
+        $this->passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        $this->initializeTimestamp(); // Method from the trait
+    }
+
+    public function getEntityType(): string
+    {
+        return 'User';
+    }
+
+    public function getLogMessage(): string
+    {
+        return "User '{$this->username}' created at {$this->getCreatedAt()->format('Y-m-d H:i:s')}";
+    }
+
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+    
+    // Magic method __toString
+    public function __toString(): string
+    {
+        return "User(id: {$this->id}, username: {$this->username}, email: {$this->email})";
+    }
+
+    // Magic method __call for handling calls to inaccessible methods
+    public function __call(string $name, array $arguments): mixed
+    {
+        if ($name === 'displayInfo') {
+            return "Dynamic call: Username is " . $this->username;
+        }
+        return null;
+    }
+
+    // Magic method __get for reading inaccessible properties
+    public function __get(string $name): mixed
+    {
+        if ($name === 'registrationDate') {
+            return $this->getCreatedAt()->format('Y-m-d');
+        }
+        return "Property '$name' does not exist.";
+    }
+}
+
+// A class with another trait to show conflict resolution
+class Post extends Entity
+{
+    use Timestampable; // This trait is fine here
+
+    public function __construct(string $uuid, public string $title)
+    {
+        parent::__construct($uuid);
+        $this->initializeTimestamp();
+    }
+
+    public function getEntityType(): string
+    {
+        return 'Post';
+    }
+}
+
+// Enums (PHP 8.1+)
+enum UserStatus: string
+{
+    case PENDING = 'pending';
+    case ACTIVE = 'active';
+    case SUSPENDED = 'suspended';
+
+    public function label(): string
+    {
+        return match($this) {
+            self::PENDING => 'Pending Approval',
+            self::ACTIVE => 'Active User',
+            self::SUSPENDED => 'Suspended Account',
+        };
+    }
+}
+
+
+// --- Using the OOP features ---
+
+// This needs to be done outside the namespace or with fully qualified names
+// We will do this in the final execution block at the end of the file.
+
+
+// -----------------------------------------------------------------------------
+// 6. ERROR AND EXCEPTION HANDLING
+// -----------------------------------------------------------------------------
+echo "\n--- Section 6: Exception Handling ---\n";
+
+namespace MyCoolApp\Exceptions;
+
+class ValidationException extends \Exception
+{
+    protected $errors = [];
+
+    public function __construct($message = "", $errors = [], $code = 0, \Throwable $previous = null)
+    {
+        parent::__construct($message, $code, $previous);
+        $this->errors = $errors;
+    }
+
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
+}
+
+// A function that might throw an exception
+function validate_user_age(int $age): bool
+{
+    if ($age < 18) {
+        throw new ValidationException("User is too young.", ['age' => 'Must be 18 or older']);
+    }
+    if ($age > 120) {
+        throw new \InvalidArgumentException("Age seems unlikely.");
+    }
+    return true;
+}
+
+try {
+    echo "Validating age 25...\n";
+    validate_user_age(25);
+    echo "OK.\n";
+
+    echo "Validating age 15...\n";
+    validate_user_age(15);
+    echo "This will not be printed.\n";
+
+} catch (ValidationException $e) {
+    echo "Caught a ValidationException: " . $e->getMessage() . "\n";
+    print_r($e->getErrors());
+} catch (\InvalidArgumentException $e) {
+    echo "Caught an InvalidArgumentException: " . $e->getMessage() . "\n";
+} finally {
+    echo "This 'finally' block always executes.\n";
+}
+
+
+// -----------------------------------------------------------------------------
+// 7. FILE I/O
+// -----------------------------------------------------------------------------
+echo "\n--- Section 7: File I/O ---\n";
+
+$filename = "sample_data.txt";
+$content = "This is a line of text written at " . date('Y-m-d H:i:s') . ".\n";
+
+// Simple file write/read
+try {
+    file_put_contents($filename, $content, FILE_APPEND);
+    echo "Wrote to $filename.\n";
+
+    $readContent = file_get_contents($filename);
+    echo "Read from $filename:\n$readContent\n";
+} catch (\Exception $e) {
+    echo "File operation failed: " . $e->getMessage() . "\n";
+}
+
+// Using file handles (more control)
+$handle = null;
+try {
+    $handle = fopen('detailed_log.log', 'a'); // Append mode
+    if ($handle === false) {
+        throw new \Exception("Could not open log file for writing.");
+    }
+    fwrite($handle, "Log entry: Something happened.\n");
+    echo "Wrote to log file using file handle.\n";
+} catch (\Exception $e) {
+    echo "File handle operation failed: " . $e->getMessage() . "\n";
+} finally {
+    if (is_resource($handle)) {
+        fclose($handle);
+    }
+}
+
+// Clean up created files
+// Using error suppression operator `@` as an example (often discouraged)
+@unlink($filename);
+@unlink('detailed_log.log');
+echo "Cleaned up generated files.\n";
+
+
+// -----------------------------------------------------------------------------
+// 8. DATE AND TIME
+// -----------------------------------------------------------------------------
+echo "\n--- Section 8: Date and Time ---\n";
+
+// Using the DateTime object (mutable)
+$now = new \DateTime('now', new \DateTimeZone('America/New_York'));
+echo "Current NY time: " . $now->format('Y-m-d H:i:s P') . "\n";
+
+// Modifying a DateTime object
+$now->modify('+1 day');
+echo "Tomorrow in NY: " . $now->format('Y-m-d') . "\n";
+
+// Using DateTimeImmutable (safer)
+$today = new \DateTimeImmutable('today');
+$tomorrow = $today->add(new \DateInterval('P1D')); // P1D = Period of 1 Day
+echo "Immutable today: " . $today->format('Y-m-d') . "\n";
+echo "Immutable tomorrow: " . $tomorrow->format('Y-m-d') . "\n";
+
+// DatePeriod for iterations
+$start = new \DateTime('2023-01-01');
+$interval = new \DateInterval('P1M'); // Period of 1 Month
+$end = new \DateTime('2023-04-01');
+$period = new \DatePeriod($start, $interval, $end);
+
+echo "First day of each month in Q1 2023:\n";
+foreach ($period as $dt) {
+    echo $dt->format("l, F j, Y\n");
+}
+
+
+// -----------------------------------------------------------------------------
+// 9. REGULAR EXPRESSIONS
+// -----------------------------------------------------------------------------
+echo "\n--- Section 9: Regular Expressions ---\n";
+
+$email = "test.user+alias@example.co.uk";
+$pattern = '/^[\w\.\+]+@[\w\.]+\.\w{2,}$/i';
+
+if (preg_match($pattern, $email, $matches)) {
+    echo "Email '$email' is valid.\n";
+    print_r($matches);
+} else {
+    echo "Email '$email' is invalid.\n";
+}
+
+// preg_replace_callback
+$text = "The quick brown [fox] jumps over the lazy [dog].";
+$replacedText = preg_replace_callback(
+    '/\[(.*?)\]/',
+    fn($m) => strtoupper($m[1]),
+    $text
+);
+echo "Original text: $text\n";
+echo "Replaced text: $replacedText\n";
+
+
+// -----------------------------------------------------------------------------
+// 10. JSON HANDLING
+// -----------------------------------------------------------------------------
+echo "\n--- Section 10: JSON Handling ---\n";
+
+$dataForJson = [
+    'userId' => 123,
+    'username' => 'json_user',
+    'roles' => ['editor', 'contributor'],
+    'metadata' => null
+];
+
+$jsonString = json_encode($dataForJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+echo "Encoded JSON:\n$jsonString\n";
+
+$decodedData = json_decode($jsonString, true); // true for associative array
+echo "Decoded username: " . $decodedData['username'] . "\n";
+
+
+// -----------------------------------------------------------------------------
+// 11. cURL FOR HTTP REQUESTS
+// -----------------------------------------------------------------------------
+echo "\n--- Section 11: cURL ---\n";
+
+// Note: This requires the cURL extension and makes a real network request.
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "https://api.github.com/zen");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_USERAGENT, 'MyCoolApp PHP Script'); // GitHub API requires a User-Agent
+
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+if ($response === false) {
+    echo "cURL Error: " . curl_error($ch) . "\n";
+} else {
+    echo "GitHub Zen Quote (HTTP $httpCode): $response\n";
+}
+curl_close($ch);
+
+
+// -----------------------------------------------------------------------------
+// 12. DATABASE INTERACTION WITH PDO
+// -----------------------------------------------------------------------------
+echo "\n--- Section 12: PDO (Database) ---\n";
+echo "Note: This section is a mock and will not connect to a real DB.\n";
+
+// PDO is the modern way to interact with databases in PHP.
+// This code demonstrates the syntax but will be wrapped in a try/catch
+// to prevent errors since no database is configured.
+
+try {
+    // Connection string for an in-memory SQLite database
+    $dsn = 'sqlite::memory:';
+    $pdo = new \PDO($dsn);
+    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+    echo "Successfully 'connected' to in-memory SQLite database.\n";
+
+    // Create a table
+    $pdo->exec("CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE
+    )");
+    echo "Table 'users' created.\n";
+
+    // Prepared statement to prevent SQL injection
+    $stmt = $pdo->prepare("INSERT INTO users (name, email) VALUES (:name, :email)");
+
+    // Bind parameters and execute
+    $usersToInsert = [
+        ['name' => 'Alice', 'email' => 'alice@example.com'],
+        ['name' => 'Bob', 'email' => 'bob@example.com'],
+    ];
+
+    // Using a transaction
+    $pdo->beginTransaction();
+    foreach ($usersToInsert as $user) {
+        $stmt->execute([':name' => $user['name'], ':email' => $user['email']]);
+    }
+    $pdo->commit();
+    echo "Inserted users within a transaction.\n";
+
+    // Fetching data
+    $stmt = $pdo->query("SELECT name, email FROM users ORDER BY name");
+    $allUsers = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+    echo "Fetched users:\n";
+    print_r($allUsers);
+
+} catch (\PDOException $e) {
+    echo "PDO demonstration failed as expected (or an actual error occurred): " . $e->getMessage() . "\n";
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+        echo "Transaction rolled back.\n";
+    }
+}
+
+
+// -----------------------------------------------------------------------------
+// 13. REFLECTION API AND ATTRIBUTES
+// -----------------------------------------------------------------------------
+echo "\n--- Section 13: Reflection and Attributes ---\n";
+
+try {
+    $userReflection = new \ReflectionClass(\MyCoolApp\Model\User::class);
+
+    echo "Inspecting class: " . $userReflection->getName() . "\n";
+    echo "It is in namespace: " . $userReflection->getNamespaceName() . "\n";
+    echo "It extends: " . $userReflection->getParentClass()->getName() . "\n";
+    echo "It uses traits: " . implode(', ', $userReflection->getTraitNames()) . "\n";
+
+    // Reading class attributes (PHP 8.0+)
+    $classAttributes = $userReflection->getAttributes(\MyCoolApp\Model\Route::class);
+    foreach ($classAttributes as $attribute) {
+        $route = $attribute->newInstance();
+        echo "Found Route attribute on class: Path='{$route->path}', Method='{$route->method}'\n";
+    }
+
+    // Inspecting a method
+    $methodReflection = $userReflection->getMethod('getLogMessage');
+    echo "Inspecting method: " . $methodReflection->getName() . "\n";
+    echo "  - Is it public? " . ($methodReflection->isPublic() ? 'Yes' : 'No') . "\n";
+    echo "  - Return type: " . $methodReflection->getReturnType() . "\n";
+
+} catch (\ReflectionException $e) {
+    echo "Reflection failed: " . $e->getMessage() . "\n";
+}
+
+// -----------------------------------------------------------------------------
+// 14. FIBERS (PHP 8.1+)
+// -----------------------------------------------------------------------------
+echo "\n--- Section 14: Fibers ---\n";
+echo "Note: This requires PHP 8.1+ to run.\n";
+
+if (class_exists('Fiber')) {
+    $fiber = new \Fiber(function(): void {
+        echo "Fiber: Starting task.\n";
+        $data = \Fiber::suspend('waiting for data');
+        echo "Fiber: Resumed with data '$data'.\n";
+    });
+
+    $valueFromFiber = $fiber->start();
+    echo "Main: Fiber suspended, returned '$valueFromFiber'.\n";
+
+    if (!$fiber->isTerminated()) {
+        echo "Main: Resuming fiber.\n";
+        $fiber->resume('some important data');
+    }
+    echo "Main: Fiber has terminated.\n";
+} else {
+    echo "Fibers are not available in this PHP version.\n";
+}
+
+// -----------------------------------------------------------------------------
+// 15. MISCELLANEOUS (eval, etc.)
+// -----------------------------------------------------------------------------
+echo "\n--- Section 15: Miscellaneous ---\n";
+
+// eval() - executes a string as PHP code. Use with extreme caution.
+$codeString = 'echo "This code was executed by eval().\n"; $evalVar = 100;';
+eval($codeString);
+// The variable $evalVar is now available in the current scope
+if (isset($evalVar)) {
+    echo "Variable from eval(): $evalVar\n";
+}
+
+// Shell exec
+// $output = shell_exec('ls -la'); // Example for Linux/macOS
+// echo "<pre>$output</pre>";
+
+
+// -----------------------------------------------------------------------------
+// MAIN EXECUTION BLOCK - Putting it all together
+// -----------------------------------------------------------------------------
+echo "\n--- Main Execution Block ---\n";
+
+// Using the classes defined in the namespace
+use MyCoolApp\Model\User;
+use MyCoolApp\Model\Post;
+use MyCoolApp\Model\UserStatus;
+
+$mainUser = new User(
+    'uuid-1234-abcd',
+    'main_user',
+    'main@test.com',
+    'supersecret'
+);
+
+$anotherUser = new User(
+    'uuid-5678-efgh',
+    'another_user',
+    'another@test.com',
+    'pa$$w0rd'
+);
+
+$mainPost = new Post('uuid-post-999', 'My First Post');
+
+echo "Created a user: " . $mainUser . "\n";
+echo "Log message from user: " . $mainUser->getLogMessage() . "\n";
+
+// Accessing a promoted property
+echo "User's email: " . $mainUser->getEmail() . "\n";
+
+// Accessing a readonly property
+echo "User's username: " . $mainUser->username . "\n";
+// The following line would cause a fatal error:
+// $mainUser->username = 'new_name';
+
+// Using a magic method __call
+echo $mainUser->displayInfo() . "\n";
+
+// Using a magic method __get
+echo "User's registration date: " . $mainUser->registrationDate . "\n";
+
+// Using an Enum
+$status = UserStatus::ACTIVE;
+echo "User status: {$status->value} ({$status->label()})\n";
+
+// Accessing a static property
+echo "Total entities created: " . MyCoolApp\Model\Entity::getEntityCount() . "\n";
+
+echo "\n--- Script Finished ---\n";
+// End of 1000+ line PHP file.
+?>

@@ -1,0 +1,833 @@
+//
+// TypeScript Language Showcase: A Comprehensive Example
+// This file contains ~1000 lines of TypeScript code demonstrating a wide range of features.
+// The theme is a simple text-based adventure game engine.
+//
+
+//
+// SECTION 1: Basic Types and Variables
+//
+
+console.log("Initializing Game Engine...");
+
+// Using `let`, `const`, and `var`
+const engineVersion: string = "1.0.0-alpha";
+let gameIsRunning: boolean = false;
+var legacyGameId: number = 42; // `var` is function-scoped, generally avoided
+
+// Primitive Types
+const gameTitle: string = "Chronicles of TypeScript";
+const maxPlayers: number = 128;
+const startingHealth: bigint = 100n; // For very large numbers
+const developer: symbol = Symbol("main_dev");
+let currentLevel: number | null = null;
+let lastError: string | undefined = undefined;
+
+// Type Inference
+let playerScore = 0; // Inferred as `number`
+const worldName = "Aethel"; // Inferred as `"Aethel"` (literal type)
+
+//
+// SECTION 2: Complex Types - Interfaces, Enums, Unions, Aliases
+//
+
+// An `enum` for game states
+enum GameState {
+  Loading,
+  MainMenu,
+  Playing,
+  Paused,
+  GameOver,
+}
+
+let currentGameState: GameState = GameState.Loading;
+
+// A `const enum` for performance (inlined at compile time)
+const enum Direction {
+  North,
+  South,
+  East,
+  West,
+}
+
+// A `string enum` for more readable debug values
+enum ItemType {
+  Weapon = "WEAPON",
+  Armor = "ARMOR",
+  Potion = "POTION",
+  Key = "KEY",
+}
+
+// `type` alias for a primitive
+type PlayerID = string | number;
+
+// `type` alias for a function signature
+type HealthChangeCallback = (newHealth: number, oldHealth: number) => void;
+
+// `interface` for an object shape
+interface Entity {
+  readonly id: number;
+  name: string;
+  position: { x: number; y: number };
+}
+
+// Interface extending another interface
+interface Damageable extends Entity {
+  maxHealth: number;
+  currentHealth: number;
+  takeDamage(amount: number): void;
+}
+
+// Union Type
+let selectedTarget: Damageable | null = null;
+
+// Intersection Type
+type DestructibleScenery = Entity & {
+  isDestructible: true;
+  hardness: number;
+};
+
+const breakableWall: DestructibleScenery = {
+  id: 1001,
+  name: "Crumbling Wall",
+  position: { x: 10, y: 5 },
+  isDestructible: true,
+  hardness: 5,
+};
+
+// Tuple Type for fixed-length, fixed-type arrays
+let playerCoordinates: [number, number, string] = [10, 20, "Forest Glade"];
+
+// Array Types
+const discoveredAreas: string[] = ["Starting Village", "Whispering Woods"];
+const monsterLevels: Array<number> = [1, 3, 3, 5, 8];
+
+//
+// SECTION 3: Functions
+//
+
+// A standard function declaration with typed parameters and return value
+function calculateDamage(attack: number, defense: number): number {
+  const damage = attack - defense;
+  return damage > 0 ? damage : 1; // Always do at least 1 damage
+}
+
+// An arrow function
+const displayMessage = (message: string): void => {
+  console.log(`[GAME] ${message}`);
+};
+
+// Function with optional parameters
+function teleport(x: number, y: number, map?: string) {
+  const targetMap = map || "current map";
+  displayMessage(`Teleporting to ${x},${y} on ${targetMap}.`);
+}
+
+// Function with default parameters
+function grantXP(amount: number = 10) {
+  playerScore += amount;
+  displayMessage(`Gained ${amount} XP! Total XP: ${playerScore}`);
+}
+
+// Function with rest parameters
+function combineItems(baseItem: string, ...ingredients: string[]): string {
+  return `Crafted ${baseItem} with ${ingredients.join(", ")}`;
+}
+
+// Function Overloading (provides multiple function signatures for the same function)
+function getEntity(id: number): Entity;
+function getEntity(name: string): Entity[];
+function getEntity(query: number | string): Entity | Entity[] | undefined {
+  if (typeof query === "number") {
+    // Logic to find a single entity by ID
+    return { id: query, name: "Found Entity", position: { x: 0, y: 0 } };
+  } else if (typeof query === "string") {
+    // Logic to find all entities with a matching name
+    return [{ id: 99, name: query, position: { x: 1, y: 1 } }];
+  }
+  return undefined;
+}
+
+const entityById = getEntity(123); // Type is `Entity`
+const entitiesByName = getEntity("Goblin"); // Type is `Entity[]`
+
+//
+// SECTION 4: Classes and Object-Oriented Programming
+//
+
+// Abstract base class that cannot be instantiated directly
+abstract class BaseCharacter implements Damageable {
+  // `public` is the default, but explicitly stated here
+  public readonly id: number;
+  public name: string;
+  // `protected` can be accessed by this class and its subclasses
+  protected position: { x: number; y: number };
+  // `private` can only be accessed within this class
+  private internalState: string = "idle";
+
+  // Access Modifiers in constructor parameters (shorthand for property creation)
+  constructor(
+    id: number,
+    name: string,
+    public maxHealth: number,
+    public currentHealth: number,
+  ) {
+    this.id = id;
+    this.name = name;
+    this.position = { x: 0, y: 0 };
+  }
+
+  // Abstract method must be implemented by subclasses
+  abstract getAuraColor(): string;
+
+  // Public method
+  public takeDamage(amount: number): void {
+    this.currentHealth -= amount;
+    if (this.currentHealth < 0) {
+      this.currentHealth = 0;
+    }
+    displayMessage(`${this.name} took ${amount} damage. Health: ${this.currentHealth}/${this.maxHealth}`);
+    this.checkDefeat();
+  }
+
+  // Private method
+  private checkDefeat(): void {
+    if (this.currentHealth <= 0) {
+      this.internalState = "defeated";
+      displayMessage(`${this.name} has been defeated!`);
+    }
+  }
+
+  // Getters and Setters
+  get isDefeated(): boolean {
+    return this.currentHealth <= 0;
+  }
+
+  set location(newPosition: { x: number; y: number }) {
+    this.position = newPosition;
+  }
+}
+
+// Inheritance
+class Player extends BaseCharacter {
+  // Static property, shared across all instances of Player
+  static instanceCount: number = 0;
+
+  private inventory: string[] = [];
+  
+  constructor(id: number, name: string, public playerClass: string) {
+    // Call the parent constructor
+    super(id, name, 100, 100);
+    Player.instanceCount++;
+  }
+
+  // Static method
+  static getPlayerCount(): number {
+    return Player.instanceCount;
+  }
+  
+  // Implementation of abstract method
+  getAuraColor(): string {
+    return "blue";
+  }
+
+  // Overriding a method (though no base `move` method exists, this is an example)
+  public move(direction: Direction) {
+    switch (direction) {
+      case Direction.North: this.position.y++; break;
+      case Direction.South: this.position.y--; break;
+      case Direction.East: this.position.x++; break;
+      case Direction.West: this.position.x--; break;
+    }
+    displayMessage(`${this.name} moves to ${this.position.x},${this.position.y}`);
+  }
+
+  public addItem(item: string): void {
+    this.inventory.push(item);
+  }
+}
+
+class Monster extends BaseCharacter {
+  constructor(id: number, name: string, public monsterType: string, health: number) {
+    super(id, name, health, health);
+  }
+
+  getAuraColor(): string {
+    return "red";
+  }
+
+  public roar(): void {
+    displayMessage(`${this.name} lets out a terrifying roar!`);
+  }
+}
+
+const mainPlayer = new Player(1, "Hero", "Warrior");
+const goblin = new Monster(101, "Goblin Grunt", "Goblin", 30);
+goblin.roar();
+mainPlayer.takeDamage(5);
+goblin.takeDamage(25);
+mainPlayer.move(Direction.North);
+
+
+//
+// SECTION 5: Generics
+//
+
+// Generic function
+function echo<T>(arg: T): T {
+  return arg;
+}
+const echoedString = echo("Hello Generics");
+const echoedNumber = echo(123.45);
+
+// Generic class for an inventory system
+class Inventory<T> {
+  private items: T[] = [];
+
+  addItem(item: T): void {
+    this.items.push(item);
+  }
+
+  getItem(index: number): T | undefined {
+    return this.items[index];
+  }
+
+  getAllItems(): readonly T[] {
+      return this.items;
+  }
+}
+
+interface Weapon {
+  name: string;
+  damage: number;
+}
+const weaponInventory = new Inventory<Weapon>();
+weaponInventory.addItem({ name: "Iron Sword", damage: 12 });
+
+interface Potion {
+  name: string;
+  effect: string;
+  duration: number;
+}
+const potionInventory = new Inventory<Potion>();
+potionInventory.addItem({ name: "Health Potion", effect: "heal", duration: 0 });
+
+// Generic Constraints
+interface Lengthwise {
+  length: number;
+}
+
+function logLength<T extends Lengthwise>(arg: T): void {
+  console.log(`Length: ${arg.length}`);
+}
+
+logLength("a string"); // Works because string has a length property
+logLength([1, 2, 3]); // Works because array has a length property
+// logLength(123); // Error: number does not have a length property
+
+// Using Type Parameters in Generic Constraints
+function getProperty<T, K extends keyof T>(obj: T, key: K) {
+  return obj[key];
+}
+
+const goblinName = getProperty(goblin, "name");
+const goblinHealth = getProperty(goblin, "currentHealth");
+// const goblinInvalid = getProperty(goblin, "nonExistentProperty"); // Error
+
+//
+// SECTION 6: Advanced Types & Type Manipulation
+//
+
+// `keyof` operator
+type PlayerKeys = keyof Player; // "id" | "name" | "maxHealth" | "currentHealth" | ...
+
+// `typeof` operator for types
+type PlayerConstructor = typeof Player;
+const a: PlayerConstructor = Player; // `a` is now the Player class constructor
+
+// Indexed Access Types (Lookup Types)
+type PlayerClassType = Player["playerClass"]; // string
+
+// Conditional Types
+type IsString<T> = T extends string ? "yes" : "no";
+type A = IsString<string>; // "yes"
+type B = IsString<number>; // "no"
+
+// `infer` keyword within conditional types
+type UnpackPromise<T> = T extends Promise<infer U> ? U : T;
+type MyType = UnpackPromise<Promise<string>>; // string
+type MyOtherType = UnpackPromise<number>; // number
+
+// Mapped Types
+type ReadonlyEntity = {
+  readonly [P in keyof Entity]: Entity[P];
+};
+
+// Built-in Mapped Types: Partial, Required, Readonly, Pick, Omit
+type PartialPlayer = Partial<Player>; // All properties of Player are now optional
+type PlayerNameAndId = Pick<Player, "name" | "id">;
+type MonsterWithoutId = Omit<Monster, "id">;
+
+function updatePlayer(update: PartialPlayer) {
+  // Logic to update player fields
+  if (update.name) {
+      mainPlayer.name = update.name;
+  }
+  // ... etc.
+}
+
+updatePlayer({ name: "The Legendary Hero" });
+
+// Template Literal Types
+type CardinalDirection = "North" | "South" | "East" | "West";
+type DiagonalDirection = `${"North" | "South"}${"East" | "West"}`;
+type AllDirections = CardinalDirection | DiagonalDirection;
+
+let moveDirection: AllDirections = "NorthWest";
+// let invalidDirection: AllDirections = "Up"; // Error
+
+// Type Guards
+function isMonster(character: BaseCharacter): character is Monster {
+  return (character as Monster).monsterType !== undefined;
+}
+
+function performAction(character: BaseCharacter) {
+  if (isMonster(character)) {
+    character.roar(); // TypeScript now knows `character` is a Monster here
+  } else {
+    // It must be a Player (in this simple example)
+    (character as Player).move(Direction.East);
+  }
+}
+
+// `in` operator type guard
+if ("playerClass" in mainPlayer) {
+  console.log(`Player class: ${mainPlayer.playerClass}`);
+}
+
+//
+// SECTION 7: Modules and Namespaces
+// (Simulated within a single file for demonstration)
+//
+
+// In a real project, these would be in separate files.
+// File: utils.ts
+export namespace Utils {
+    export function clamp(value: number, min: number, max: number): number {
+        return Math.max(min, Math.min(value, max));
+    }
+}
+
+// File: combat.ts
+// import { Utils } from './utils'; // This would be at the top of the file
+import U = Utils; // Namespace alias
+
+export namespace Combat {
+    export function calculateHit(attacker: BaseCharacter, defender: BaseCharacter): boolean {
+        const hitChance = 0.85; // 85% base hit chance
+        const isHit = Math.random() < hitChance;
+        displayMessage(`${attacker.name} ${isHit ? 'hits' : 'misses'} ${defender.name}!`);
+        return isHit;
+    }
+
+    export function battle(char1: BaseCharacter, char2: BaseCharacter) {
+        let turn = 0;
+        while (!char1.isDefeated && !char2.isDefeated) {
+            const attacker = turn % 2 === 0 ? char1 : char2;
+            const defender = turn % 2 === 0 ? char2 : char1;
+            
+            if (calculateHit(attacker, defender)) {
+                const damage = U.clamp(10, 5, 20); // Using the imported utility
+                defender.takeDamage(damage);
+            }
+            turn++;
+        }
+        displayMessage("The battle has ended!");
+    }
+}
+
+// File: main.ts
+// import { Combat } from './combat';
+// import { Player, Monster } from './characters';
+
+const anotherGoblin = new Monster(102, "Goblin Archer", "Goblin", 25);
+// Combat.battle(mainPlayer, anotherGoblin); // Start a battle
+
+// Default export/import example
+namespace DefaultExporter {
+    const PI = 3.14159;
+    export default PI;
+}
+// import MyPI from './default-exporter';
+const MyPI = DefaultExporter; // Simulation
+
+//
+// SECTION 8: Asynchronous Programming
+//
+
+// Using Promises
+function loadGameData(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    displayMessage(`Fetching data from ${url}...`);
+    setTimeout(() => {
+      if (url.includes("fail")) {
+        reject(new Error("Failed to load game data. Server offline."));
+      } else {
+        const mockData = `{"worldName": "Aethel", "startLocation": "Town Square"}`;
+        resolve(mockData);
+      }
+    }, 1500); // Simulate network delay
+  });
+}
+
+// Chaining with .then() and .catch()
+loadGameData("api/gamedata")
+  .then(data => {
+    const parsedData = JSON.parse(data);
+    displayMessage(`Game data loaded for world: ${parsedData.worldName}`);
+  })
+  .catch(error => {
+    console.error(error.message);
+  })
+  .finally(() => {
+    displayMessage("Data fetch attempt finished.");
+  });
+
+// Using async/await (syntactic sugar over Promises)
+async function initializeGame() {
+  try {
+    currentGameState = GameState.Loading;
+    displayMessage("Initializing game with async/await...");
+    const data = await loadGameData("api/playerdata");
+    const playerJson = JSON.parse(data); // This would have player info
+    // ... load player ...
+    currentGameState = GameState.Playing;
+    displayMessage("Game ready to play!");
+    return true;
+  } catch (error) {
+    if (error instanceof Error) {
+        lastError = error.message;
+        console.error("Initialization failed:", error.message);
+    }
+    currentGameState = GameState.GameOver;
+    return false;
+  }
+}
+
+// Running the async function
+// initializeGame();
+
+// Promise.all - waits for all promises to resolve
+async function loadAllAssets() {
+    try {
+        const [models, textures, sounds] = await Promise.all([
+            loadGameData("api/models"),
+            loadGameData("api/textures"),
+            loadGameData("api/sounds"),
+        ]);
+        displayMessage("All core assets loaded successfully!");
+    } catch (err) {
+        displayMessage("Failed to load one or more assets.");
+    }
+}
+
+// Promise.race - resolves or rejects as soon as one promise does
+const primaryServer = loadGameData("api/primary");
+const fallbackServer = loadGameData("api/fallback");
+
+Promise.race([primaryServer, fallbackServer])
+    .then(fastestResult => {
+        displayMessage("Got data from the fastest server.");
+    });
+
+
+//
+// SECTION 9: Decorators (Experimental Feature)
+//
+// To use decorators, you need to enable `experimentalDecorators` in tsconfig.json
+
+// A simple decorator logger for a class method
+function logMethod(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  const originalMethod = descriptor.value;
+  descriptor.value = function(...args: any[]) {
+    console.log(`DECORATOR: Calling method '${propertyKey}' with args: ${JSON.stringify(args)}`);
+    const result = originalMethod.apply(this, args);
+    console.log(`DECORATOR: Method '${propertyKey}' returned: ${JSON.stringify(result)}`);
+    return result;
+  };
+  return descriptor;
+}
+
+// A class decorator factory
+function Serializable(name: string) {
+  return function(constructor: Function) {
+    console.log(`DECORATOR: Class ${constructor.name} is marked as Serializable with key '${name}'.`);
+    Object.defineProperty(constructor.prototype, 'serializationKey', { value: name });
+  }
+}
+
+// A property decorator
+function DefaultValue(value: any) {
+    return function (target: any, propertyKey: string) {
+        target[propertyKey] = value;
+    }
+}
+
+// A parameter decorator
+function Required(target: any, propertyKey: string, parameterIndex: number) {
+    console.log(`DECORATOR: Parameter ${parameterIndex} of ${propertyKey} is marked as required.`);
+}
+
+
+@Serializable("GameSettings")
+class GameSettings {
+
+  @DefaultValue("Normal")
+  difficulty: string;
+
+  @DefaultValue(true)
+  soundEnabled: boolean;
+
+  constructor() {
+    this.difficulty = "Easy"; // This will be overwritten by the decorator default
+    this.soundEnabled = true;
+  }
+  
+  @logMethod
+  setDifficulty(@Required difficulty: "Easy" | "Normal" | "Hard"): void {
+    this.difficulty = difficulty;
+  }
+
+  @logMethod
+  toggleSound(newState?: boolean): boolean {
+    this.soundEnabled = newState ?? !this.soundEnabled;
+    return this.soundEnabled;
+  }
+}
+
+const settings = new GameSettings();
+settings.setDifficulty("Hard");
+settings.toggleSound();
+// Accessing property added by class decorator
+// console.log((settings as any).serializationKey); // "GameSettings"
+
+
+//
+// SECTION 10: Metaprogramming, Iterators, and Generators
+//
+
+// Making a class iterable using `Symbol.iterator`
+class QuestLog implements Iterable<string> {
+    private quests: string[] = [];
+    
+    constructor() {
+        this.quests.push("1. Defeat the Goblin");
+        this.quests.push("2. Find the Hidden Cave");
+        this.quests.push("3. Report back to the Elder");
+    }
+
+    addQuest(quest: string) {
+        this.quests.push(quest);
+    }
+    
+    [Symbol.iterator](): Iterator<string> {
+        let step = 0;
+        const quests = this.quests;
+        
+        return {
+            next(): IteratorResult<string> {
+                if (step < quests.length) {
+                    return { value: quests[step++], done: false };
+                } else {
+                    return { value: undefined, done: true };
+                }
+            }
+        };
+    }
+}
+
+const playerQuests = new QuestLog();
+for (const quest of playerQuests) {
+    // This loop works because QuestLog is iterable
+    displayMessage(`Current quest: ${quest}`);
+}
+
+// Generator function for creating unique IDs
+function* idGenerator(): Generator<number, void, unknown> {
+  let id = 2000;
+  while (true) {
+    yield id++;
+  }
+}
+
+const uniqueId = idGenerator();
+console.log(uniqueId.next().value); // 2000
+console.log(uniqueId.next().value); // 2001
+
+// Proxy object for intercepting and customizing object operations
+const playerProxy = new Proxy(mainPlayer, {
+    get: (target, prop, receiver) => {
+        console.log(`Proxy: Accessing property '${String(prop)}' on ${target.name}`);
+        return Reflect.get(target, prop, receiver);
+    },
+    set: (target, prop, value, receiver) => {
+        if (prop === 'currentHealth' && value > target.maxHealth) {
+            console.warn(`Proxy: Attempted to set health above max. Clamping value.`);
+            value = target.maxHealth;
+        }
+        console.log(`Proxy: Setting property '${String(prop)}' to '${value}'`);
+        return Reflect.set(target, prop, value, receiver);
+    }
+});
+
+playerProxy.name; // Logs the "get" trap
+playerProxy.currentHealth = 150; // Logs the "set" trap and clamps health to 100
+
+// Using Reflect API
+Reflect.set(mainPlayer, 'name', 'Hero Reflected');
+console.log(Reflect.has(mainPlayer, 'playerClass')); // true
+
+//
+// SECTION 11: DOM Manipulation & TSX (for browser environments)
+// (This code is typed for a browser context but won't run in Node.js)
+//
+
+// Type assertion for DOM elements
+// In a browser: const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+// if (canvas) {
+//     const ctx = canvas.getContext('2d');
+// }
+
+// Event listener with a typed event object
+// const button = document.querySelector('.start-game');
+// button?.addEventListener('click', (event: MouseEvent) => {
+//     console.log('Game started by click!', event.clientX, event.clientY);
+//     initializeGame();
+// });
+
+// TSX (JSX for TypeScript) types for a React-like framework
+declare namespace JSX {
+  interface IntrinsicElements {
+    div: { id?: string; className?: string; children?: any };
+    button: { onClick?: () => void; children?: any };
+  }
+}
+
+interface ComponentProps {
+  title: string;
+  onClick: () => void;
+}
+
+// A typed functional component (conceptual)
+const UIButton = ({ title, onClick }: ComponentProps) => {
+  // In a real framework, this would return JSX:
+  // return <button onClick={onClick}>{title}</button>;
+  return { component: "UIButton", title, onClick };
+};
+
+const myButton = UIButton({ title: "Start", onClick: () => gameIsRunning = true });
+
+
+//
+// SECTION 12: Unsafe Code & Advanced Assertions
+//
+
+// Using `any` to opt-out of type checking (use sparingly!)
+let legacyApiData: any = '{"id": 1, "name": "Legacy Item"}';
+legacyApiData = 123; // No error
+legacyApiData.someNonExistentMethod(); // Fails at runtime, not compile time
+
+// Using `unknown` is a safer alternative to `any`
+let userInput: unknown = '{"user": "Alice"}';
+
+// You must perform a type check or assertion before using `unknown`
+if (typeof userInput === 'string') {
+  const data = JSON.parse(userInput); // OK
+}
+
+// Type Assertions
+const loadedEntity: unknown = { id: 500, name: "Mimic", position: { x: 5, y: 5 }, maxHealth: 75, currentHealth: 75 };
+const castedMonster = loadedEntity as Monster; // Asserting that the shape matches Monster
+const anotherCast = <Monster>loadedEntity; // Alternative (older) syntax, doesn't work in .tsx files
+
+// Non-null assertion operator `!`
+// Tells the compiler that a value is not null or undefined, even if its type allows it.
+function findCharacterById(id: number): BaseCharacter | undefined {
+    return id === 1 ? mainPlayer : undefined;
+}
+const foundChar = findCharacterById(1);
+// console.log(foundChar.name); // Error: `foundChar` might be undefined
+console.log(foundChar!.name); // OK, but will crash at runtime if `foundChar` is actually undefined
+
+
+//
+// SECTION 13: Utility and Miscellaneous
+//
+
+// Mixin pattern using class expressions and intersections
+type Constructor<T = {}> = new (...args: any[]) => T;
+
+function Timestamped<TBase extends Constructor>(Base: TBase) {
+    return class extends Base {
+        timestamp = new Date();
+    };
+}
+
+function Taggable<TBase extends Constructor>(Base: TBase) {
+    return class extends Base {
+        tags: string[] = [];
+        addTag(tag: string) {
+            this.tags.push(tag);
+        }
+    };
+}
+
+class Sprite {
+    constructor(public url: string) {}
+}
+
+const TimestampedSprite = Timestamped(Sprite);
+const TaggableTimestampedSprite = Taggable(TimestampedSprite);
+
+const mySprite = new TaggableTimestampedSprite("player.png");
+mySprite.addTag("player");
+console.log(mySprite.url, mySprite.timestamp, mySprite.tags);
+
+// Triple-slash directives and ambient declarations
+// Used for referencing external type definition files or modules.
+/// <reference path="some-legacy-types.d.ts" />
+
+// `declare` is used to tell TypeScript that a variable exists,
+// usually in another script (like a library loaded via a <script> tag).
+declare var GLOBAL_CONFIG: {
+    apiUrl: string;
+    environment: 'development' | 'production';
+};
+
+// if (GLOBAL_CONFIG.environment === 'development') {
+//     console.log("Running in development mode.");
+// }
+
+// The `never` type for functions that never return
+function fail(message: string): never {
+  throw new Error(message);
+}
+
+// Exhaustiveness checking with `never`
+function getActionFromState(state: GameState): string {
+    switch (state) {
+        case GameState.Loading: return "Show loading screen";
+        case GameState.MainMenu: return "Show main menu";
+        case GameState.Playing: return "Enable player controls";
+        case GameState.Paused: return "Show pause menu";
+        case GameState.GameOver: return "Show game over screen";
+        default:
+            // If we add a new GameState and forget to handle it here,
+            // TypeScript will throw an error because `state` will not be of type `never`.
+            const _exhaustiveCheck: never = state;
+            return _exhaustiveCheck;
+    }
+}
+
+console.log("TypeScript showcase script finished execution.");
+// End of file. Total line count is ~1000.

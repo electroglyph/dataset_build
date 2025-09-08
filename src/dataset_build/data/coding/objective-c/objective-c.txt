@@ -1,0 +1,906 @@
+// Filename: ComprehensiveExample.m
+// Description: A comprehensive, ~1000 line example of Objective-C features
+// for use in an LLM training dataset. This file includes a wide range of
+// concepts from basic syntax to advanced runtime manipulation.
+
+#import <Foundation/Foundation.h>
+#import <objc/runtime.h> // For runtime functions
+#import <CoreFoundation/CoreFoundation.h> // For CFStringRef example
+
+// =================================================================================
+// 1. Preamble: C-style constructs, constants, and forward declarations
+// =================================================================================
+
+// C-style function prototypes
+void logWithTimestamp(NSString *message);
+void executeTaskWithCBlock(int repetitions, void (^taskBlock)(int i));
+
+// Using #define for simple constants
+#define APP_VERSION @"1.2.0-beta"
+#define MAX_RETRY_COUNT 5
+
+// Using global const for typed constants (preferred)
+extern NSString * const VehicleManagerDidUpdateFleetNotification;
+const NSString * const VehicleManagerDidUpdateFleetNotification = @"com.example.VehicleManagerDidUpdateFleetNotification";
+
+// C-style struct for location data
+typedef struct {
+    double latitude;
+    double longitude;
+} GeoCoordinate;
+
+// C-style enum
+typedef enum {
+    EngineTypeGasoline,
+    EngineTypeDiesel,
+    EngineTypeElectric,
+    EngineTypeHybrid
+} EngineType;
+
+// Modern NS_ENUM for improved type safety and Swift compatibility
+typedef NS_ENUM(NSInteger, VehicleStatus) {
+    VehicleStatusParked,
+    VehicleStatusMoving,
+    VehicleStatusNeedsMaintenance,
+    VehicleStatusDecommissioned
+};
+
+// NS_OPTIONS for bitmasks, representing selectable features
+typedef NS_OPTIONS(NSUInteger, VehicleFeatures) {
+    VehicleFeatureNone          = 0,
+    VehicleFeatureSunroof       = 1 << 0, // 1
+    VehicleFeatureHeatedSeats   = 1 << 1, // 2
+    VehicleFeatureGPS           = 1 << 2, // 4
+    VehicleFeatureAllWheelDrive = 1 << 3, // 8
+    VehicleFeatureAutopilot     = 1 << 4, // 16
+};
+
+// Forward declarations of all classes and protocols to avoid dependency issues
+@protocol Drivable;
+@protocol Maintainable;
+@protocol Serializable;
+@class BaseVehicle;
+@class Car;
+@class ElectricCar;
+@class Motorcycle;
+@class UserProfile;
+@class Garage;
+@class VehicleManager;
+@class NetworkFetcher;
+@class KVOObserver;
+
+// =================================================================================
+// 2. Protocols: Defining interfaces for delegation and behavior
+// =================================================================================
+
+// Protocol for any object that can be driven
+@protocol Drivable <NSObject>
+@required
+- (void)startEngine;
+- (void)stopEngine;
+- (void)accelerate;
+@optional
+- (void)engageCruiseControlAtSpeed:(double)kph;
+- (BOOL)isMoving;
+@end
+
+// Protocol for objects that require maintenance
+@protocol Maintainable <NSObject>
+@property (nonatomic, readonly) NSDate *lastServiceDate;
+@property (nonatomic, readonly) double odometerReading;
+- (BOOL)needsService;
+- (void)performServiceWithCompletion:(void (^)(BOOL success, NSError *error))completion;
+@end
+
+// Protocol for objects that can be serialized to/from a dictionary
+@protocol Serializable <NSObject>
+- (NSDictionary *)toDictionary;
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary;
+@end
+
+// =================================================================================
+// 3. Category & Class Interfaces
+// =================================================================================
+
+#pragma mark - Category on NSObject for Logging
+// A simple category to add a logging method to all objects
+@interface NSObject (Logging)
+- (void)logDescription;
+@end
+
+
+#pragma mark - BaseVehicle Interface
+// A base class demonstrating inheritance, properties, and protocol conformance.
+@interface BaseVehicle : NSObject <Drivable, Maintainable, Serializable>
+// Properties with various attributes
+@property (nonatomic, copy) NSString *model;
+@property (nonatomic, copy, readonly) NSString *vin; // Vehicle Identification Number
+@property (nonatomic, assign) NSInteger year;
+@property (nonatomic, assign) EngineType engineType;
+@property (nonatomic, strong) NSDate *lastServiceDate;
+@property (nonatomic, assign) double odometerReading;
+@property (nonatomic, weak) UserProfile *primaryDriver; // Weak reference to avoid retain cycles
+// Class method (factory pattern)
++ (instancetype)vehicleWithModel:(NSString *)model year:(NSInteger)year;
+// Designated initializer
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year NS_DESIGNATED_INITIALIZER;
+// Public instance method
+- (NSString *)vehicleDetails;
+@end
+
+
+#pragma mark - Subclass Interfaces
+// Car: A subclass of BaseVehicle
+@interface Car : BaseVehicle
+@property (nonatomic, assign) NSInteger numberOfDoors;
+@property (nonatomic, assign) VehicleFeatures features;
+- (void)openTrunk;
+@end
+
+// ElectricCar: A subclass of Car, showing method overriding
+@interface ElectricCar : Car
+@property (nonatomic, assign) double batteryLevel; // 0.0 to 100.0
+@property (nonatomic, assign) double batteryCapacityKWh;
+- (void)chargeBattery;
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year batteryCapacity:(double)capacity;
+@end
+
+// Motorcycle: Another subclass of BaseVehicle
+@interface Motorcycle : BaseVehicle
+@property (nonatomic, assign) BOOL hasSidecar;
+- (void)performWheelie;
+@end
+
+
+#pragma mark - Data Model and Container Class Interfaces
+// UserProfile: A data model class for demonstrating KVC/KVO and composition
+@interface UserProfile : NSObject <Serializable>
+@property (nonatomic, copy) NSString *fullName;
+@property (nonatomic, strong) NSDate *dateOfBirth;
+@property (nonatomic, readonly) NSInteger age; // Derived property
+@property (nonatomic, strong) NSMutableArray<BaseVehicle *> *ownedVehicles;
+- (void)addVehicle:(BaseVehicle *)vehicle;
+@end
+
+// Garage: A container class demonstrating a more complex object graph
+@interface Garage : NSObject
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, assign) GeoCoordinate location;
+@property (nonatomic, strong) NSMutableSet<BaseVehicle *> *parkedVehicles;
+- (void)parkVehicle:(BaseVehicle *)vehicle;
+- (void)retrieveVehicle:(BaseVehicle *)vehicle;
+@end
+
+
+#pragma mark - Service and Utility Class Interfaces
+// VehicleManager: A singleton class for managing a global collection of vehicles
+@interface VehicleManager : NSObject
+@property (nonatomic, strong, readonly) NSArray<BaseVehicle *> *fleet;
++ (instancetype)sharedManager;
+- (void)addVehicleToFleet:(BaseVehicle *)vehicle;
+- (void)removeVehicleFromFleet:(BaseVehicle *)vehicle;
+- (void)listAllVehicles;
+- (BaseVehicle *)findVehicleByVIN:(NSString *)vin;
+@end
+
+// NetworkFetcher: Demonstrates asynchronous networking with GCD and blocks
+@interface NetworkFetcher : NSObject
+- (void)fetchDataFromURL:(NSURL *)url completion:(void (^)(NSData *data, NSError *error))completionHandler;
+- (void)performBatchedRequests:(NSArray<NSURLRequest *> *)requests completion:(void (^)(NSArray *results, NSError *error))completion;
+@end
+
+// NSString Category: Adding utility methods to an existing Foundation class
+@interface NSString (Utility)
+- (BOOL)isEmail;
+- (NSString *)reversedString;
+- (NSString *)stringByTrimmingWhitespace;
+@end
+
+// RuntimeExplorer: A class to demonstrate Objective-C runtime features
+@interface RuntimeExplorer : NSObject
++ (void)inspectClass:(Class)aClass;
++ (void)dynamicallyAddMethodToObject:(id)object withSelectorName:(NSString *)selectorName;
++ (void)setAssociatedData:(id)data toObject:(id)object;
++ (id)getAssociatedDataFromObject:(id)object;
+@end
+
+// KVOObserver: A helper class to encapsulate KVO observation logic
+@interface KVOObserver : NSObject
+@property (nonatomic, copy) NSString *observedKeyPath;
+- (void)observe:(id)object keyPath:(NSString *)keyPath;
+- (void)stopObserving:(id)object;
+@end
+
+
+// =================================================================================
+// 4. Implementations
+// =================================================================================
+
+#pragma mark - C-style Function Implementation
+void logWithTimestamp(NSString *message) {
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss.SSS";
+    NSString *timestamp = [formatter stringFromDate:[NSDate date]];
+    NSLog(@"[%@] %@", timestamp, message);
+}
+
+void executeTaskWithCBlock(int repetitions, void (^taskBlock)(int i)) {
+    if (!taskBlock) return;
+    for (int i = 0; i < repetitions; ++i) {
+        taskBlock(i);
+    }
+}
+
+
+#pragma mark - NSObject (Logging) Implementation
+@implementation NSObject (Logging)
+- (void)logDescription {
+    logWithTimestamp([self description]);
+}
+@end
+
+
+#pragma mark - BaseVehicle Implementation
+@implementation BaseVehicle {
+    BOOL _isEngineOn;
+    double _currentSpeedKph;
+}
+
+// Synthesize properties if custom getter/setter is not provided (often optional now)
+@synthesize lastServiceDate = _lastServiceDate;
+@synthesize odometerReading = _odometerReading;
+
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year {
+    self = [super init];
+    if (self) {
+        _model = [model copy];
+        _year = year;
+        _vin = [[NSUUID UUID] UUIDString];
+        _isEngineOn = NO;
+        _currentSpeedKph = 0.0;
+        _engineType = EngineTypeGasoline;
+        _lastServiceDate = [NSDate date];
+        _odometerReading = 0.0;
+    }
+    return self;
+}
+
++ (instancetype)vehicleWithModel:(NSString *)model year:(NSInteger)year {
+    return [[self alloc] initWithModel:model year:year];
+}
+
+- (instancetype)init {
+    return [self initWithModel:@"Unknown" year:1970];
+}
+
+- (NSString *)vehicleDetails {
+    NSString *driverName = self.primaryDriver.fullName ?: @"No driver";
+    return [NSString stringWithFormat:@"%ld %@ (%@), Driver: %@", (long)self.year, self.model, self.vin, driverName];
+}
+
+- (void)dealloc {
+    logWithTimestamp([NSString stringWithFormat:@"Deallocating vehicle: %@", self.model]);
+}
+
+#pragma mark - Drivable Protocol
+- (void)startEngine {
+    if (!_isEngineOn) {
+        _isEngineOn = YES;
+        NSLog(@"%@: Engine started.", self.model);
+    }
+}
+- (void)stopEngine {
+    if (_isEngineOn) {
+        _isEngineOn = NO;
+        _currentSpeedKph = 0;
+        NSLog(@"%@: Engine stopped.", self.model);
+    }
+}
+- (void)accelerate {
+    if (_isEngineOn) {
+        _currentSpeedKph += 10.0;
+        _odometerReading += _currentSpeedKph / 3600.0 * 10.0; // Simple simulation
+        NSLog(@"%@: Accelerating to %.1f kph.", self.model, _currentSpeedKph);
+    } else {
+        NSLog(@"%@: Cannot accelerate, engine is off.", self.model);
+    }
+}
+- (BOOL)isMoving {
+    return _currentSpeedKph > 0.1;
+}
+
+#pragma mark - Maintainable Protocol
+- (BOOL)needsService {
+    NSDate *oneYearAgo = [[NSCalendar currentCalendar] dateByAddingUnit:NSCalendarUnitYear value:-1 toDate:[NSDate date] options:0];
+    return [self.lastServiceDate compare:oneYearAgo] == NSOrderedAscending;
+}
+- (void)performServiceWithCompletion:(void (^)(BOOL, NSError *))completion {
+    NSLog(@"%@: Starting service.", self.model);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        self.lastServiceDate = [NSDate date];
+        NSLog(@"%@: Service complete.", self.model);
+        if (completion) {
+            completion(YES, nil);
+        }
+    });
+}
+
+#pragma mark - Serializable Protocol
+- (NSDictionary *)toDictionary {
+    return @{
+        @"class": NSStringFromClass([self class]),
+        @"model": self.model,
+        @"year": @(self.year),
+        @"vin": self.vin,
+        @"odometer": @(self.odometerReading)
+    };
+}
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    NSString *model = dictionary[@"model"];
+    NSInteger year = [dictionary[@"year"] integerValue];
+    self = [self initWithModel:model year:year];
+    if (self) {
+        _vin = dictionary[@"vin"]; // Override generated VIN
+        _odometerReading = [dictionary[@"odometer"] doubleValue];
+    }
+    return self;
+}
+@end
+
+
+#pragma mark - Car Implementation
+@implementation Car
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year {
+    self = [super initWithModel:model year:year];
+    if (self) {
+        _numberOfDoors = 4;
+        _features = VehicleFeatureNone;
+    }
+    return self;
+}
+- (void)openTrunk {
+    NSLog(@"The trunk of the %@ is now open.", self.model);
+}
+- (NSString *)vehicleDetails {
+    NSString *baseDetails = [super vehicleDetails];
+    return [NSString stringWithFormat:@"%@, Doors: %ld", baseDetails, (long)self.numberOfDoors];
+}
+// Override Serializable
+- (NSDictionary *)toDictionary {
+    NSMutableDictionary *dict = [[super toDictionary] mutableCopy];
+    dict[@"numberOfDoors"] = @(self.numberOfDoors);
+    dict[@"features"] = @(self.features);
+    return [dict copy];
+}
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    self = [super initWithDictionary:dictionary];
+    if (self) {
+        _numberOfDoors = [dictionary[@"numberOfDoors"] integerValue];
+        _features = [dictionary[@"features"] unsignedIntegerValue];
+    }
+    return self;
+}
+@end
+
+
+#pragma mark - ElectricCar Implementation
+@implementation ElectricCar
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year batteryCapacity:(double)capacity {
+    self = [super initWithModel:model year:year];
+    if (self) {
+        self.engineType = EngineTypeElectric;
+        _batteryCapacityKWh = capacity;
+        _batteryLevel = 100.0;
+    }
+    return self;
+}
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year {
+    return [self initWithModel:model year:year batteryCapacity:75.0];
+}
+- (void)startEngine {
+    if (!_isEngineOn) {
+        _isEngineOn = YES;
+        NSLog(@"%@: System activated. Ready to drive.", self.model);
+    }
+}
+- (void)accelerate {
+    if (_isEngineOn && _batteryLevel > 1.0) {
+        [super accelerate];
+        _batteryLevel -= 0.5;
+        NSLog(@"%@: Battery level is now %.1f%%", self.model, _batteryLevel);
+    } else {
+        NSLog(@"%@: Cannot accelerate. System off or battery too low.", self.model);
+    }
+}
+- (void)chargeBattery {
+    NSLog(@"%@: Charging...", self.model);
+    _batteryLevel = 100.0;
+    NSLog(@"%@: Battery fully charged.", self.model);
+}
+- (NSString *)vehicleDetails {
+    NSString *baseDetails = [super vehicleDetails];
+    return [NSString stringWithFormat:@"%@ [EV], Battery: %.1f%%", baseDetails, self.batteryLevel];
+}
+@end
+
+
+#pragma mark - Motorcycle Implementation
+@implementation Motorcycle
+- (instancetype)initWithModel:(NSString *)model year:(NSInteger)year {
+    self = [super initWithModel:model year:year];
+    if (self) {
+        _hasSidecar = NO;
+    }
+    return self;
+}
+- (void)performWheelie {
+    if ([self isMoving]) {
+        NSLog(@"The %@ is performing a wheelie! (Safely, of course).", self.model);
+    } else {
+        NSLog(@"Cannot perform a wheelie while parked.");
+    }
+}
+- (NSString *)vehicleDetails {
+    NSString *baseDetails = [super vehicleDetails];
+    return [NSString stringWithFormat:@"%@, %@", baseDetails, self.hasSidecar ? @"Has Sidecar" : @"No Sidecar"];
+}
+@end
+
+
+#pragma mark - UserProfile Implementation
+@interface UserProfile ()
+// Private properties in a class extension
+@property (nonatomic, copy, readwrite) NSString *internalID;
+@end
+
+@implementation UserProfile
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _ownedVehicles = [NSMutableArray array];
+        _internalID = [[NSUUID UUID] UUIDString];
+    }
+    return self;
+}
+- (NSInteger)age {
+    if (!self.dateOfBirth) return 0;
+    NSDateComponents *ageComponents = [[NSCalendar currentCalendar]
+                                       components:NSCalendarUnitYear
+                                       fromDate:self.dateOfBirth
+                                       toDate:[NSDate date]
+                                       options:0];
+    return ageComponents.year;
+}
+- (void)addVehicle:(BaseVehicle *)vehicle {
+    [self.ownedVehicles addObject:vehicle];
+    vehicle.primaryDriver = self;
+}
+// Serializable protocol
+- (NSDictionary *)toDictionary {
+    return @{@"fullName": self.fullName, @"dob": self.dateOfBirth};
+}
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    self = [self init];
+    if (self) {
+        self.fullName = dictionary[@"fullName"];
+        self.dateOfBirth = dictionary[@"dob"];
+    }
+    return self;
+}
+@end
+
+
+#pragma mark - Garage Implementation
+@implementation Garage
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _parkedVehicles = [NSMutableSet set];
+    }
+    return self;
+}
+- (void)parkVehicle:(BaseVehicle *)vehicle {
+    if (vehicle) {
+        [self.parkedVehicles addObject:vehicle];
+        logWithTimestamp([NSString stringWithFormat:@"%@ parked at %@", vehicle.model, self.name]);
+    }
+}
+- (void)retrieveVehicle:(BaseVehicle *)vehicle {
+    if ([self.parkedVehicles containsObject:vehicle]) {
+        [self.parkedVehicles removeObject:vehicle];
+        logWithTimestamp([NSString stringWithFormat:@"%@ retrieved from %@", vehicle.model, self.name]);
+    }
+}
+@end
+
+
+#pragma mark - VehicleManager (Singleton) Implementation
+@implementation VehicleManager {
+    NSMutableArray<BaseVehicle *> *_internalFleet;
+    dispatch_queue_t _fleetAccessQueue;
+}
++ (instancetype)sharedManager {
+    static VehicleManager *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[self alloc] init];
+    });
+    return sharedInstance;
+}
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _internalFleet = [NSMutableArray array];
+        // Create a concurrent queue for reads, and use barriers for writes
+        _fleetAccessQueue = dispatch_queue_create("com.example.fleetQueue", DISPATCH_QUEUE_CONCURRENT);
+    }
+    return self;
+}
+- (NSArray<BaseVehicle *> *)fleet {
+    __block NSArray *fleetCopy;
+    dispatch_sync(_fleetAccessQueue, ^{
+        fleetCopy = [_internalFleet copy];
+    });
+    return fleetCopy;
+}
+- (void)addVehicleToFleet:(BaseVehicle *)vehicle {
+    if (!vehicle) return;
+    // Use a barrier for write access to ensure thread safety
+    dispatch_barrier_async(_fleetAccessQueue, ^{
+        if (![self->_internalFleet containsObject:vehicle]) {
+            [self->_internalFleet addObject:vehicle];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:VehicleManagerDidUpdateFleetNotification object:self];
+            });
+        }
+    });
+}
+- (void)removeVehicleFromFleet:(BaseVehicle *)vehicle {
+    if (!vehicle) return;
+    dispatch_barrier_async(_fleetAccessQueue, ^{
+        [self->_internalFleet removeObject:vehicle];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:VehicleManagerDidUpdateFleetNotification object:self];
+        });
+    });
+}
+- (void)listAllVehicles {
+    NSLog(@"--- Current Vehicle Fleet ---");
+    NSArray *currentFleet = self.fleet;
+    if (currentFleet.count == 0) {
+        NSLog(@"(Fleet is empty)");
+    } else {
+        for (BaseVehicle *vehicle in currentFleet) {
+            NSLog(@"- %@", [vehicle vehicleDetails]);
+        }
+    }
+    NSLog(@"-----------------------------");
+}
+- (BaseVehicle *)findVehicleByVIN:(NSString *)vin {
+    __block BaseVehicle *foundVehicle = nil;
+    dispatch_sync(_fleetAccessQueue, ^{
+        NSPredicate *predicate = [NSPredicate predicateWithFormat:@"vin == %@", vin];
+        foundVehicle = [[self->_internalFleet filteredArrayUsingPredicate:predicate] firstObject];
+    });
+    return foundVehicle;
+}
+@end
+
+
+#pragma mark - NetworkFetcher Implementation
+@implementation NetworkFetcher
+- (void)fetchDataFromURL:(NSURL *)url completion:(void (^)(NSData *, NSError *))completionHandler {
+    if (!completionHandler) return;
+    // Using @try/@catch for exceptional situations
+    @try {
+        if (!url) @throw [NSException exceptionWithName:@"InvalidURLExcpetion" reason:@"URL must not be nil" userInfo:nil];
+
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            // In a real app, use NSURLSession. This is a simulation.
+            NSLog(@"Simulating fetch from: %@", url);
+            NSData *mockData = [@"{\"status\": \"ok\"}" dataUsingEncoding:NSUTF8StringEncoding];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completionHandler(mockData, nil);
+            });
+        });
+    } @catch (NSException *exception) {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: exception.reason, @"NSUnderlyingException": exception};
+        NSError *error = [NSError errorWithDomain:@"com.example.NetworkFetcher" code:-1 userInfo:userInfo];
+        completionHandler(nil, error);
+    } @finally {
+        NSLog(@"Fetch attempt finished.");
+    }
+}
+- (void)performBatchedRequests:(NSArray<NSURLRequest *> *)requests completion:(void (^)(NSArray *, NSError *))completion {
+    dispatch_group_t requestGroup = dispatch_group_create();
+    dispatch_queue_t responseQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    
+    __block NSMutableArray *results = [NSMutableArray arrayWithCapacity:requests.count];
+    __block NSError *firstError = nil;
+
+    for (NSURLRequest *request in requests) {
+        dispatch_group_enter(requestGroup);
+        // Simulate network call
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(arc4random_uniform(200) * NSEC_PER_MSEC)), responseQueue, ^{
+            @synchronized (results) {
+                [results addObject:@{@"url": request.URL.absoluteString, @"status": @200}];
+            }
+            dispatch_group_leave(requestGroup);
+        });
+    }
+
+    dispatch_group_notify(requestGroup, dispatch_get_main_queue(), ^{
+        if (completion) {
+            completion([results copy], firstError);
+        }
+    });
+}
+@end
+
+
+#pragma mark - NSString (Utility) Implementation
+@implementation NSString (Utility)
+- (BOOL)isEmail {
+    NSString *emailRegex = @"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}";
+    return [[NSPredicate predicateWithFormat:@"SELF MATCHES %@", emailRegex] evaluateWithObject:self];
+}
+- (NSString *)reversedString {
+    NSMutableString *reversed = [NSMutableString string];
+    [self enumerateSubstringsInRange:NSMakeRange(0, self.length)
+                             options:(NSStringEnumerationReverse | NSStringEnumerationByComposedCharacterSequences)
+                          usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+        [reversed appendString:substring];
+    }];
+    return [reversed copy];
+}
+- (NSString *)stringByTrimmingWhitespace {
+    return [self stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+@end
+
+
+#pragma mark - RuntimeExplorer Implementation
+void dynamicMethodIMP(id self, SEL _cmd) {
+    NSLog(@"Greetings from a dynamically added method on a %@!", [self class]);
+}
+static char kAssociatedDataKey;
+@implementation RuntimeExplorer
++ (void)inspectClass:(Class)aClass {
+    logWithTimestamp([NSString stringWithFormat:@"Inspecting class: %@", NSStringFromClass(aClass)]);
+    unsigned int count;
+    Method *methods = class_copyMethodList(aClass, &count);
+    NSLog(@"%u instance methods:", count);
+    for (unsigned int i = 0; i < count; i++) {
+        NSLog(@"- %@", NSStringFromSelector(method_getName(methods[i])));
+    }
+    free(methods);
+
+    objc_property_t *properties = class_copyPropertyList(aClass, &count);
+    NSLog(@"%u properties:", count);
+    for (unsigned int i = 0; i < count; i++) {
+        NSLog(@"- %s", property_getName(properties[i]));
+    }
+    free(properties);
+}
++ (void)dynamicallyAddMethodToObject:(id)object withSelectorName:(NSString *)selectorName {
+    SEL selector = NSSelectorFromString(selectorName);
+    class_addMethod([object class], selector, (IMP)dynamicMethodIMP, "v@:");
+}
++ (void)setAssociatedData:(id)data toObject:(id)object {
+    objc_setAssociatedObject(object, &kAssociatedDataKey, data, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
++ (id)getAssociatedDataFromObject:(id)object {
+    return objc_getAssociatedObject(object, &kAssociatedDataKey);
+}
+@end
+
+
+#pragma mark - KVOObserver Implementation
+@implementation KVOObserver
+- (void)observe:(id)object keyPath:(NSString *)keyPath {
+    self.observedKeyPath = keyPath;
+    [object addObserver:self forKeyPath:keyPath options:(NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:NULL];
+}
+- (void)stopObserving:(id)object {
+    [object removeObserver:self forKeyPath:self.observedKeyPath];
+}
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+    id oldValue = change[NSKeyValueChangeOldKey];
+    id newValue = change[NSKeyValueChangeNewKey];
+    logWithTimestamp([NSString stringWithFormat:@"KVO: '%@' on %@ changed from '%@' to '%@'", keyPath, [object class], oldValue, newValue]);
+}
+@end
+
+
+// =================================================================================
+// 5. Manual Retain-Release Example (for historical context)
+// =================================================================================
+#if !__has_feature(objc_arc)
+void demonstrateManualMemoryManagement() {
+    NSLog(@"\n--- Demonstrating Manual Retain-Release (MRR) ---");
+    
+    // Equivalent of [[NSString alloc] initWithFormat:...]
+    NSString *myString = [[NSString alloc] initWithFormat:@"%@ %d", @"Test", 123];
+    NSLog(@"String created, retain count: %lu", [myString retainCount]);
+    
+    // We own it, so we must release it.
+    [myString release];
+    
+    // Using autorelease to defer release
+    NSMutableArray *myArray = [NSMutableArray array]; // Autoreleased object
+    [myArray retain]; // Take ownership
+    
+    for (int i=0; i<5; i++) {
+        // Factory method returns an autoreleased object
+        NSNumber *num = [NSNumber numberWithInt:i];
+        [myArray addObject:num];
+    }
+    
+    NSLog(@"Array contents: %@", myArray);
+    [myArray release]; // Release our ownership
+}
+#endif
+
+
+// =================================================================================
+// 6. Main Execution Block
+// =================================================================================
+int main(int argc, const char * argv[]) {
+    // @autoreleasepool is crucial for memory management in ARC
+    @autoreleasepool {
+        logWithTimestamp(@"Comprehensive Objective-C Example Starting.");
+        
+        // -------------------------------------------------------------------------
+        // Section A: Object Creation, Polymorphism, and Protocols
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section A: Basics ---");
+        Car *myCar = [[Car alloc] initWithModel:@"Honda Civic" year:2023];
+        myCar.features = VehicleFeatureGPS | VehicleFeatureHeatedSeats;
+        
+        ElectricCar *myTesla = [[ElectricCar alloc] initWithModel:@"Tesla Model Y" year:2024 batteryCapacity:82.0];
+        Motorcycle *myBike = [Motorcycle vehicleWithModel:@"Harley Davidson" year:2021];
+
+        // An array of different objects conforming to the same base class
+        NSArray<BaseVehicle *> *vehicles = @[myCar, myTesla, myBike];
+        for (id<Drivable> vehicle in vehicles) {
+            [vehicle startEngine];
+            [vehicle accelerate];
+            if ([vehicle respondsToSelector:@selector(isMoving)] && [vehicle isMoving]) {
+                logWithTimestamp([NSString stringWithFormat:@"A vehicle is moving."]);
+            }
+            [vehicle stopEngine];
+        }
+        
+        // -------------------------------------------------------------------------
+        // Section B: Data Models, KVC, and KVO
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section B: Data Models, KVC & KVO ---");
+        UserProfile *user = [[UserProfile alloc] init];
+        [user setValue:@"John Appleseed" forKey:@"fullName"]; // KVC
+        NSDateComponents *comps = [[NSDateComponents alloc] init];
+        [comps setDay:1]; [comps setMonth:4]; [comps setYear:1990];
+        user.dateOfBirth = [[NSCalendar currentCalendar] dateFromComponents:comps];
+        
+        KVOObserver *nameObserver = [[KVOObserver alloc] init];
+        [nameObserver observe:user keyPath:@"fullName"];
+        
+        user.fullName = @"John Q. Appleseed"; // Triggers KVO
+        logWithTimestamp([NSString stringWithFormat:@"User is %ld years old", (long)user.age]);
+        [nameObserver stopObserving:user];
+        
+        [user addVehicle:myCar];
+        [user addVehicle:myTesla];
+        
+        // -------------------------------------------------------------------------
+        // Section C: Singleton, Collections, and Notifications
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section C: Singleton, Collections & Notifications ---");
+        VehicleManager *manager = [VehicleManager sharedManager];
+        [manager addVehicleToFleet:myCar];
+        [manager addVehicleToFleet:myTesla];
+        [manager addVehicleToFleet:myBike];
+        
+        // Let the async add operations complete
+        [NSThread sleepForTimeInterval:0.1];
+        
+        [manager listAllVehicles];
+        
+        // Use NSSet for unordered unique collections
+        NSSet *modelSet = [manager.fleet valueForKeyPath:@"model"];
+        NSLog(@"Vehicle models in fleet: %@", modelSet);
+        
+        // -------------------------------------------------------------------------
+        // Section D: Blocks, GCD, and Asynchronous Operations
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section D: Blocks & GCD ---");
+        executeTaskWithCBlock(3, ^(int i) {
+            NSLog(@"C function with block, iteration %d", i);
+        });
+        
+        NetworkFetcher *fetcher = [[NetworkFetcher alloc] init];
+        NSURL *sampleURL = [NSURL URLWithString:@"https://api.example.com/data"];
+        
+        [fetcher fetchDataFromURL:sampleURL completion:^(NSData *data, NSError *error) {
+            if (error) {
+                NSLog(@"Network fetch failed: %@", error.localizedDescription);
+            } else {
+                logWithTimestamp(@"Async fetch successful.");
+            }
+        }];
+        
+        NSMutableArray *requests = [NSMutableArray array];
+        for (int i=0; i<5; i++) {
+            NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.example.com/item/%d", i]];
+            [requests addObject:[NSURLRequest requestWithURL:url]];
+        }
+        [fetcher performBatchedRequests:requests completion:^(NSArray *results, NSError *error) {
+            logWithTimestamp([NSString stringWithFormat:@"Batch of %lu requests completed.", (unsigned long)results.count]);
+        }];
+        
+        // -------------------------------------------------------------------------
+        // Section E: Categories, Serialization, and File I/O
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section E: Categories & Serialization ---");
+        NSString *email = @"   test@example.com   ";
+        NSLog(@"Is '%@' an email? %@", [email stringByTrimmingWhitespace], [[email stringByTrimmingWhitespace] isEmail] ? @"YES" : @"NO");
+
+        NSDictionary *carData = [myCar toDictionary];
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:carData options:NSJSONWritingPrettyPrinted error:nil];
+        NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+        NSLog(@"Serialized Car to JSON:\n%@", jsonString);
+        
+        // Write to file
+        NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"car.json"];
+        [jsonData writeToFile:filePath atomically:YES];
+        NSLog(@"Wrote JSON to: %@", filePath);
+        
+        // Read from file and deserialize
+        NSData *readData = [NSData dataWithContentsOfFile:filePath];
+        NSDictionary *readDict = [NSJSONSerialization JSONObjectWithData:readData options:0 error:nil];
+        Car *deserializedCar = [[Car alloc] initWithDictionary:readDict];
+        NSLog(@"Deserialized car: %@", [deserializedCar vehicleDetails]);
+
+        // -------------------------------------------------------------------------
+        // Section F: Runtime, Metaprogramming, and Core Foundation
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section F: Runtime & Metaprogramming ---");
+        [RuntimeExplorer inspectClass:[ElectricCar class]];
+        [RuntimeExplorer dynamicallyAddMethodToObject:myBike withSelectorName:@"honkHorn"];
+        
+        if ([myBike respondsToSelector:@selector(honkHorn)]) {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+            [myBike performSelector:@selector(honkHorn)];
+            #pragma clang diagnostic pop
+        }
+        
+        [RuntimeExplorer setAssociatedData:@"Needs new tires" toObject:myBike];
+        NSLog(@"Associated data: %@", [RuntimeExplorer getAssociatedDataFromObject:myBike]);
+        
+        // Core Foundation bridging (unsafe operation)
+        NSString *nsString = @"Hello from Foundation";
+        CFStringRef cfString = (__bridge CFStringRef)nsString; // No ownership transfer
+        NSLog(@"CFString length: %ld", CFStringGetLength(cfString));
+        
+        CFStringRef cfStringCreated = CFStringCreateWithCString(NULL, "Hello from Core Foundation", kCFStringEncodingUTF8);
+        NSString *nsStringBridged = (__bridge_transfer NSString *)cfStringCreated; // Transfer ownership to ARC
+        NSLog(@"Bridged NSString: %@", nsStringBridged);
+        
+        // -------------------------------------------------------------------------
+        // Section G: Final Cleanup and MRR Demo
+        // -------------------------------------------------------------------------
+        NSLog(@"\n--- Section G: Final ---");
+        #if !__has_feature(objc_arc)
+        demonstrateManualMemoryManagement();
+        #else
+        NSLog(@"Compiled with ARC. MRR demo skipped.");
+        #endif
+        
+        // Let async tasks finish
+        logWithTimestamp(@"Waiting for async operations to complete...");
+        [NSThread sleepForTimeInterval:2.0];
+        
+        logWithTimestamp(@"Comprehensive Objective-C Example Finished.");
+    }
+    return 0;
+}

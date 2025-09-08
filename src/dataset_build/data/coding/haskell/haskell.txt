@@ -1,0 +1,795 @@
+-- This file contains approximately 1000 lines of Haskell code demonstrating a wide
+-- variety of language features, from basic syntax to advanced concepts like
+-- Template Haskell, FFI, and concurrency. The goal is to provide a comprehensive
+-- sample for training or analysis purposes.
+
+-- A large set of language extensions to enable modern Haskell features.
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
+
+-- The module declaration for this file.
+module LargeHaskellExample where
+
+-- =============================================================================
+-- SECTION 0: IMPORTS
+-- =============================================================================
+-- This section imports a wide range of standard and third-party libraries
+-- commonly used in Haskell development.
+
+-- Standard Library Imports
+import Control.Monad (when, forM_, forever, guard, zipWithM)
+import Control.Monad.IO.Class (liftIO, MonadIO)
+import Data.List (sortBy, groupBy, intercalate, find)
+import Data.Ord (comparing)
+import System.IO (hPutStrLn, stderr, IOMode(..), withFile, Handle)
+import System.Environment (getArgs)
+import Control.Exception (try, SomeException, bracket)
+import Text.Printf (printf)
+import Data.Maybe (fromMaybe, isJust, catMaybes)
+import Data.Char (toUpper, isDigit)
+import Data.IORef (newIORef, readIORef, writeIORef, atomicModifyIORef')
+import Control.Concurrent (forkIO, threadDelay, myThreadId)
+import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
+import Control.Concurrent.STM (STM, TVar, newTVar, readTVar, writeTVar, atomically, retry, orElse)
+import GHC.Generics (Generic, Generic1)
+import System.Random (randomRIO)
+import Unsafe.Coerce (unsafeCoerce)
+import System.IO.Unsafe (unsafePerformIO)
+import Data.Word (Word8)
+
+-- Common Third-Party Library Imports
+import qualified Data.Map as M
+import qualified Data.Set as S
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Vector as V
+import qualified Data.Aeson as A
+import Data.Aeson ((.=), (.:))
+import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
+import Control.Monad.State.Strict (MonadState, StateT, get, put, runStateT, gets)
+import Control.Monad.Except (MonadError, ExceptT, throwE, runExceptT, catchE)
+import Control.Monad.Trans.Class (lift)
+
+-- Lens library for concise data access and manipulation
+import Control.Lens (makeLenses, view, set, over, (&), (.~), (^.))
+
+-- Template Haskell for metaprogramming at compile time
+import Language.Haskell.TH
+
+-- Foreign Function Interface for calling C code
+import Foreign.C.Types (CInt(..), CDouble(..), CChar)
+import Foreign.C.String (CString, newCString, peekCString)
+import Foreign.Ptr (Ptr, castPtr)
+import Foreign.Marshal.Alloc (malloc, free, alloca)
+import Foreign.Storable (Storable(..))
+
+-- =============================================================================
+-- SECTION 1: DATA TYPES
+-- =============================================================================
+-- This section defines a variety of custom data types, showcasing ADTs,
+-- record syntax, newtypes, GADTs, and parameterized types.
+
+-- A simple Algebraic Data Type (ADT) for colors.
+-- It derives many standard typeclasses automatically.
+data Color = Red | Green | Blue | Yellow
+  deriving (Eq, Show, Read, Ord, Enum, Bounded)
+
+-- An ADT with parameters to represent geometric shapes.
+data Shape
+  = Circle Double -- radius
+  | Rectangle Double Double -- width, height
+  | Polygon [(Double, Double)] -- list of vertices
+  deriving (Eq, Show)
+
+-- Record syntax for a more complex type representing a person.
+-- Records provide named fields for easier access.
+data Person = Person
+  { personName    :: String
+  , personAge     :: Int
+  , personAddress :: Address
+  } deriving (Show, Eq, Generic)
+
+data Address = Address
+  { street :: String
+  , city   :: String
+  , zipCode :: String
+  } deriving (Show, Eq, Generic)
+
+-- A parameterized ADT for representing computations that can fail.
+-- This is similar to `Either` or Rust's `Result`.
+data Result e a
+  = Ok a
+  | Err e
+  deriving (Eq, Show, Ord, Functor, Foldable, Traversable)
+
+-- Newtypes provide compile-time type safety with zero runtime cost.
+-- They are useful for distinguishing between different kinds of IDs or strings.
+newtype UserID = UserID Int deriving (Show, Eq, Ord, A.ToJSON, A.FromJSON, Num)
+newtype ProductID = ProductID Int deriving (Show, Eq, Ord, Num)
+newtype Email = Email { getEmail :: T.Text } deriving (Show, Eq, Ord)
+
+-- GADT (Generalized Algebraic Data Type) for a well-typed expression language.
+-- The type parameter `a` reflects the type of the expression itself.
+data Expr a where
+  EInt  :: Int -> Expr Int
+  EBool :: Bool -> Expr Bool
+  EAdd  :: Expr Int -> Expr Int -> Expr Int
+  EMul  :: Expr Int -> Expr Int -> Expr Int
+  EEq   :: Eq a => Expr a -> Expr a -> Expr Bool
+  EIf   :: Expr Bool -> Expr a -> Expr a -> Expr a
+
+-- A recursive data structure: a binary tree.
+data BinaryTree a
+  = Empty
+  | Node a (BinaryTree a) (BinaryTree a)
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+
+-- A file system tree structure.
+data FileSystemObject
+  = File { fileName :: String, fileSize :: Int }
+  | Directory { dirName :: String, contents :: [FileSystemObject] }
+  deriving (Show, Eq)
+
+-- A Phantom Type example for units of measure, enforced at compile time.
+data Unit = Meters | Feet
+data Length (unit :: Unit) = Length Double deriving (Show, Eq)
+
+-- A simple command language for a turtle-graphics-like system.
+data Command
+  = Forward Double
+  | Turn Double -- degrees
+  | PenUp
+  | PenDown
+  | Loop Int [Command] -- Repeat a sequence of commands
+  deriving (Show, Read, Eq)
+
+-- =============================================================================
+-- SECTION 2: TYPECLASSES AND INSTANCES
+-- =============================================================================
+-- This section demonstrates defining custom typeclasses and creating instances
+-- for both our custom types and standard library types.
+
+-- A custom typeclass for serializing to a simplified JSON-like string format.
+class ToSimpleJson a where
+  toSimpleJson :: a -> String
+
+instance ToSimpleJson Int where
+  toSimpleJson = show
+
+instance ToSimpleJson String where
+  toSimpleJson s = "\"" ++ s ++ "\""
+
+instance ToSimpleJson Bool where
+  toSimpleJson True = "true"
+  toSimpleJson False = "false"
+
+instance ToSimpleJson Person where
+  toSimpleJson p =
+    "{ " ++
+    "\"name\": " ++ toSimpleJson (personName p) ++ ", " ++
+    "\"age\": " ++ toSimpleJson (personAge p) ++
+    " }"
+
+instance ToSimpleJson Color where
+  toSimpleJson c = toSimpleJson (show c)
+
+-- Making our Result type an instance of Applicative and Monad.
+instance Applicative (Result e) where
+  pure = Ok
+  (Err e) <*> _ = Err e
+  (Ok f)  <*> r = fmap f r
+
+instance Monad (Result e) where
+  (Err e) >>= _ = Err e
+  (Ok a)  >>= f = f a
+
+-- A multi-parameter typeclass with a functional dependency.
+-- `| c -> a b` means that the type `c` uniquely determines types `a` and `b`.
+class HasComponents c a b | c -> a b where
+  getFst :: c -> a
+  getSnd :: c -> b
+
+instance HasComponents (a, b) a b where
+  getFst = fst
+  getSnd = snd
+
+-- Using Aeson for real JSON serialization via deriving Generic.
+-- This is the standard way to handle JSON in Haskell.
+instance A.ToJSON Address
+instance A.FromJSON Address
+instance A.ToJSON Person
+instance A.FromJSON Person
+
+-- A typeclass for things that can be logged.
+class Loggable a where
+    logMessage :: a -> String
+
+instance Loggable String where
+    logMessage = id
+
+instance Loggable Int where
+    logMessage i = "Integer value: " ++ show i
+
+instance Loggable Person where
+    logMessage p = "Person(name=" ++ personName p ++ ", age=" ++ show (personAge p) ++ ")"
+
+instance Loggable Command where
+  logMessage (Forward d) = "COMMAND: Move forward by " ++ show d
+  logMessage (Turn d)    = "COMMAND: Turn by " ++ show d
+  logMessage PenUp       = "COMMAND: Lift pen"
+  logMessage PenDown     = "COMMAND: Lower pen"
+  logMessage (Loop n _)  = "COMMAND: Loop " ++ show n ++ " times"
+
+
+-- =============================================================================
+-- SECTION 3: TEMPLATE HASKELL (METAPROGRAMMING)
+-- =============================================================================
+-- Template Haskell allows running Haskell code at compile time to generate
+-- new Haskell code, which is then spliced into the program.
+
+-- This TH function generates a 'debugPrint' function for any type.
+-- e.g., `$(makeDebugPrint ''Person)` creates `debugPrintPerson :: Person -> IO ()`
+makeDebugPrint :: Name -> Q [Dec]
+makeDebugPrint typeName = do
+  let funcNameStr = "debugPrint" ++ nameBase typeName
+  let funcName = mkName funcNameStr
+  let varName = mkName "x"
+
+  -- The function body: `\val -> putStrLn "TypeName: " >> print val`
+  body <- [| \val -> putStrLn $(stringE (nameBase typeName ++ ": ")) >> print val |]
+
+  -- The function type signature: `TypeName -> IO ()`
+  let funcType = AppT (AppT ArrowT (ConT typeName)) (AppT (ConT ''IO) (TupleT 0))
+
+  return
+    [ SigD funcName funcType
+    , FunD funcName
+      [Clause [VarP varName] (NormalB (AppE body (VarE varName))) []]
+    ]
+
+-- Splice: Here we call the TH function at compile time.
+-- This generates the function `debugPrintPerson` which we can use later.
+$(makeDebugPrint ''Person)
+
+
+-- =============================================================================
+-- SECTION 4: FUNCTIONS
+-- =============================================================================
+-- A collection of functions demonstrating recursion, higher-order functions,
+-- pattern matching, guards, list comprehensions, and laziness.
+
+-- A simple factorial function (recursive).
+factorial :: Integer -> Integer
+factorial 0 = 1
+factorial n = n * factorial (n - 1)
+
+-- A tail-recursive factorial using an accumulator for efficiency.
+factorial' :: Integer -> Integer
+factorial' n = go n 1
+  where
+    go 0 acc = acc
+    go m acc = go (m - 1) (m * acc)
+
+-- An inefficient but clear Fibonacci implementation.
+fib :: Int -> Int
+fib 0 = 0
+fib 1 = 1
+fib n = fib (n-1) + fib (n-2)
+
+-- Higher-order function: apply a function twice.
+applyTwice :: (a -> a) -> a -> a
+applyTwice f x = f (f x)
+
+-- Using guards for conditional logic.
+grade :: Int -> Char
+grade score
+  | score >= 90 = 'A'
+  | score >= 80 = 'B'
+  | score >= 70 = 'C'
+  | score >= 60 = 'D'
+  | otherwise   = 'F'
+
+-- An evaluator for our GADT expression language, showcasing pattern matching.
+eval :: Expr a -> a
+eval (EInt n)     = n
+eval (EBool b)    = b
+eval (EAdd e1 e2) = eval e1 + eval e2
+eval (EMul e1 e2) = eval e1 * eval e2
+eval (EEq e1 e2)  = eval e1 == eval e2
+eval (EIf c t e)  = if eval c then eval t else eval e
+
+-- List comprehensions for concise list generation.
+pythagoreanTriples :: Int -> [(Int, Int, Int)]
+pythagoreanTriples n =
+  [ (a, b, c)
+  | c <- [1..n]
+  , b <- [1..c]
+  , a <- [1..b]
+  , a*a + b*b == c*c
+  ]
+
+-- Point-free style (tacit programming) using function composition.
+sumOfOddSquares :: [Int] -> Int
+sumOfOddSquares = sum . map (^2) . filter odd
+
+-- A very simple parser for a key-value format "key=value".
+parseKeyValue :: String -> Maybe (String, String)
+parseKeyValue s =
+  case find (=='=') s of
+    Nothing -> Nothing
+    Just _  ->
+      let (key, valWithEq) = break (=='=') s
+      in if null key || null (tail valWithEq)
+         then Nothing
+         else Just (key, tail valWithEq)
+
+-- Demonstrating laziness by creating an infinite list of prime numbers.
+primes :: [Integer]
+primes = sieve [2..]
+  where
+    sieve (p:xs) = p : sieve [x | x <- xs, x `mod` p /= 0]
+
+-- A function operating on our FileSystemObject tree.
+totalSize :: FileSystemObject -> Int
+totalSize (File _ size) = size
+totalSize (Directory _ cs) = sum (map totalSize cs)
+
+-- Interpreter for our turtle command DSL.
+data TurtleState = TurtleState
+  { pos :: (Double, Double) -- (x, y)
+  , angle :: Double         -- degrees, 0 is east
+  , penActive :: Bool
+  } deriving Show
+
+initialTurtleState :: TurtleState
+initialTurtleState = TurtleState (0,0) 0 True
+
+interpretCommand :: TurtleState -> Command -> TurtleState
+interpretCommand st (Forward d) =
+  let (x, y) = pos st
+      rads = angle st * pi / 180
+      newX = x + d * cos rads
+      newY = y + d * sin rads
+  in st { pos = (newX, newY) }
+interpretCommand st (Turn deg) =
+  st { angle = (angle st + deg) `fmod` 360 }
+  where a `fmod` b = a - fromInteger (floor (a/b)) * b
+interpretCommand st PenUp = st { penActive = False }
+interpretCommand st PenDown = st { penActive = True }
+interpretCommand st (Loop n cmds) =
+  foldl interpretCommands st (replicate n cmds)
+
+interpretCommands :: TurtleState -> [Command] -> TurtleState
+interpretCommands st cmds = foldl interpretCommand st cmds
+
+-- Example command sequence to draw a square.
+drawSquare :: [Command]
+drawSquare = [Loop 4 [Forward 100, Turn 90]]
+
+-- =============================================================================
+-- SECTION 5: MONADS, MONAD TRANSFORMERS, AND IO
+-- =============================================================================
+-- This section demonstrates practical use of monads for handling effects like
+-- IO, state, configuration, and errors, using a monad transformer stack.
+
+-- An "application" monad stack combining multiple effects.
+-- We want a Reader for configuration, State for a counter, and ExceptT for errors, all over IO.
+data AppConfig = AppConfig
+  { cfgVerbose :: Bool
+  , cfgLogFile :: FilePath
+  }
+
+data AppState = AppState
+  { stCounter :: Int
+  }
+
+newtype App a = App
+  { runApp :: ReaderT AppConfig (StateT AppState (ExceptT String IO)) a
+  } deriving ( Functor
+             , Applicative
+             , Monad
+             , MonadReader AppConfig
+             , MonadState AppState
+             , MonadError String
+             , MonadIO
+             )
+
+-- Helper to run the entire application stack.
+runAppStack :: AppConfig -> AppState -> App a -> IO (Either String (a, AppState))
+runAppStack cfg st app = runExceptT $ runStateT (runReaderT (runApp app) cfg) st
+
+-- A function that uses our App monad to increment a counter.
+incrementCounter :: App Int
+incrementCounter = do
+  st <- get
+  let newCounter = stCounter st + 1
+  put st { stCounter = newCounter }
+  logMsg $ "Counter incremented to " ++ show newCounter
+  return newCounter
+
+-- A logging function that respects the verbosity setting in the config.
+logMsg :: String -> App ()
+logMsg msg = do
+  isVerbose <- asks cfgVerbose
+  when isVerbose $
+    liftIO . putStrLn $ "[LOG] " ++ msg
+
+-- A task that might fail, demonstrating error handling in the stack.
+potentiallyFailingTask :: Int -> App String
+potentiallyFailingTask x = do
+  logMsg "Running a potentially failing task..."
+  counter <- gets stCounter
+  if x + counter < 10
+    then return "Task succeeded!"
+    else throwE "Task failed: value too high!"
+
+-- A complete program using the App monad, to be run from `main`.
+runApplication :: IO ()
+runApplication = do
+  let config = AppConfig { cfgVerbose = True, cfgLogFile = "/tmp/app.log" }
+  let initialState = AppState { stCounter = 5 }
+
+  let program = do
+        _ <- incrementCounter
+        _ <- incrementCounter
+        result1 <- potentiallyFailingTask 1
+        logMsg result1
+        result2 <- potentiallyFailingTask 10 -- this one should fail
+        logMsg result2 -- this will not be reached
+
+  result <- runAppStack config initialState program
+
+  case result of
+    Left err -> hPutStrLn stderr $ "Application failed: " ++ err
+    Right (res, finalState) -> do
+      putStrLn $ "Application finished with result: " ++ show res
+      putStrLn $ "Final state counter: " ++ show (stCounter finalState)
+
+-- `bracket` is used for safe resource acquisition and release (e.g., files).
+processFile :: FilePath -> (T.Text -> T.Text) -> IO ()
+processFile path transform = bracket
+  (TIO.readFile path) -- acquire resource
+  (\_ -> putStrLn "--- File processed ---") -- release resource
+  (TIO.putStrLn . transform) -- use resource
+
+-- =============================================================================
+-- SECTION 6: CONCURRENCY AND PARALLELISM
+-- =============================================================================
+-- This section covers Haskell's powerful concurrency features, including
+-- lightweight threads (`forkIO`), communication channels (`MVar`), and
+-- Software Transactional Memory (`STM`).
+
+-- Using `forkIO` to spawn lightweight threads.
+concurrentPrinters :: IO ()
+concurrentPrinters = do
+  _ <- forkIO $ printer "A" 100000
+  _ <- forkIO $ printer "B" 120000
+  putStrLn "Spawned two threads. They will run for 3 seconds."
+  threadDelay 3000000 -- wait 3 seconds
+  putStrLn "Main thread finished."
+  where
+    printer :: String -> Int -> IO ()
+    printer name delay = forever $ do
+      putStr name
+      threadDelay delay
+
+-- Using `MVar` for safe communication and synchronization between threads.
+mvarExample :: IO ()
+mvarExample = do
+  m <- newEmptyMVar
+  _ <- forkIO $ do
+    putStrLn "Producer: working..."
+    threadDelay 2000000
+    let result = 42
+    putStrLn $ "Producer: putting " ++ show result ++ " into MVar."
+    putMVar m result
+
+  putStrLn "Consumer: waiting for result..."
+  result <- takeMVar m
+  putStrLn $ "Consumer: got " ++ show result ++ " from MVar."
+
+-- Using Software Transactional Memory (STM) for a bank account transfer.
+-- STM provides composable atomic memory transactions.
+data Account = Account
+  { accountId :: Int
+  , balance :: TVar Int
+  }
+
+-- Atomically transfer money from one account to another.
+-- `retry` will block the transaction until sufficient funds are available.
+transfer :: Account -> Account -> Int -> STM ()
+transfer from to amount = do
+  fromBalance <- readTVar (balance from)
+  when (fromBalance < amount) retry
+  writeTVar (balance from) (fromBalance - amount)
+  writeTVar (balance to) . (+ amount) =<< readTVar (balance to)
+
+stmExample :: IO ()
+stmExample = do
+  acc1TVar <- atomically $ newTVar 1000
+  acc2TVar <- atomically $ newTVar 500
+  let acc1 = Account 1 acc1TVar
+  let acc2 = Account 2 acc2TVar
+
+  putStrLn "Initial balances: Acc1=1000, Acc2=500"
+  putStrLn "Spawning two transfers: Acc1 -> Acc2 (200), Acc2 -> Acc1 (50)"
+  _ <- forkIO . atomically $ transfer acc1 acc2 200
+  _ <- forkIO . atomically $ transfer acc2 acc1 50
+
+  threadDelay 1000000
+
+  finalBal1 <- atomically $ readTVar (balance acc1)
+  finalBal2 <- atomically $ readTVar (balance acc2)
+
+  printf "Final balances: Account 1 = %d, Account 2 = %d\n" finalBal1 finalBal2
+
+-- =============================================================================
+-- SECTION 7: ADVANCED DATA STRUCTURES USAGE
+-- =============================================================================
+-- This section demonstrates the use of efficient data structures from common
+-- libraries like `containers`, `vector`, `text`, and `bytestring`.
+
+-- Working with Data.Map (balanced binary trees for key-value pairs).
+type PhoneBook = M.Map String String
+
+phoneBookExample :: PhoneBook
+phoneBookExample = M.fromList
+  [ ("Alice", "555-1234")
+  , ("Bob", "555-5678")
+  , ("Charlie", "555-8765")
+  ]
+
+findPhoneNumber :: String -> PhoneBook -> String
+findPhoneNumber name pb = fromMaybe "Not found" (M.lookup name pb)
+
+-- Working with Data.Set (balanced binary trees for unique values).
+setExample :: IO ()
+setExample = do
+  let setA = S.fromList [1, 2, 3, 4, 5]
+  let setB = S.fromList [4, 5, 6, 7, 8]
+
+  putStrLn $ "Set A: " ++ show setA
+  putStrLn $ "Set B: " ++ show setB
+  putStrLn $ "Union: " ++ show (S.union setA setB)
+  putStrLn $ "Intersection: " ++ show (S.intersection setA setB)
+
+-- Working with Data.Vector for high-performance, packed arrays.
+vectorSum :: IO Double
+vectorSum = do
+  let size = 1000000
+  vec <- V.replicateM size (randomRIO (0.0, 1.0) :: IO Double)
+  return $ V.sum vec
+
+-- Working with Text and ByteString for efficient string processing.
+-- Data.Text is for Unicode text; Data.ByteString is for raw bytes.
+textAndByteStringExample :: IO ()
+textAndByteStringExample = do
+  let someText = T.pack "こんにちは世界！ This is a mix of UTF-8 characters."
+  let upperText = T.toUpper someText
+  TIO.putStrLn upperText
+
+  let someBytes = B.pack [72, 101, 108, 108, 111, 0 :: Word8] -- "Hello"
+  let filePath = "output.bin"
+  B.writeFile filePath someBytes
+  readBytes <- B.readFile filePath
+  putStrLn $ "Read bytes from file: " ++ show readBytes
+
+
+-- =============================================================================
+-- SECTION 8: ADVANCED HASKELL FEATURES
+-- =============================================================================
+-- This section explores more advanced and esoteric features of the language.
+
+-- --- 8.1 Foreign Function Interface (FFI) ---
+-- Calling the `sin` function from the C standard math library (libm).
+foreign import ccall "sin" c_sin :: CDouble -> CDouble
+
+haskellSin :: Double -> Double
+haskellSin x = realToFrac (c_sin (realToFrac x))
+
+ffiExample :: IO ()
+ffiExample = do
+  let angle = pi / 2
+  printf "Haskell sin(%.2f) = %.2f\n" angle (sin angle)
+  printf "C FFI   sin(%.2f) = %.2f\n" angle (haskellSin angle)
+
+-- --- 8.2 Type Families ---
+-- Associated type families allow a typeclass to define associated types.
+class Serializable a where
+  type Rep a :: *
+  serialize :: a -> Rep a
+  deserialize :: Rep a -> a
+
+instance Serializable Int where
+  type Rep Int = String
+  serialize = show
+  deserialize = read
+
+-- --- 8.3 Rank-N Types (Higher-Rank Polymorphism) ---
+-- `applyToShowable` takes a function `f` which must itself be polymorphic.
+-- `f` must work for ANY type `a` that has a `Show` instance.
+applyToShowable :: (forall a. Show a => a -> String) -> (Int, Bool) -> (String, String)
+applyToShowable f (i, b) = (f i, f b)
+
+showAndWrap :: Show a => a -> String
+showAndWrap x = "<<" ++ show x ++ ">>"
+
+rankNExample :: (String, String)
+rankNExample = applyToShowable showAndWrap (123, True)
+
+-- --- 8.4 Optics (Lens) ---
+-- Lenses provide a clean, composable way to access and modify nested data.
+data GameConfig = GameConfig
+  { _gcPlayer :: Player
+  , _gcDifficulty :: Int
+  } deriving Show
+
+data Player = Player
+  { _plName :: String
+  , _plPosition :: Point
+  } deriving Show
+
+data Point = Point
+  { _ptX :: Double
+  , _ptY :: Double
+  } deriving Show
+
+-- Use Template Haskell to automatically generate lenses for our data types.
+makeLenses ''GameConfig
+makeLenses ''Player
+makeLenses ''Point
+
+lensExample :: IO ()
+lensExample = do
+  let initialConfig = GameConfig
+        { _gcPlayer = Player
+          { _plName = "hero"
+          , _plPosition = Point { _ptX = 0.0, _ptY = 0.0 }
+          }
+        , _gcDifficulty = 5
+        }
+
+  -- Get a nested value using `view` or `^.`.
+  let playerName = initialConfig ^. (gcPlayer . plName)
+  putStrLn $ "Player name: " ++ playerName
+
+  -- Set a nested value using `set` or `&` and `.~`.
+  let newConfig = initialConfig & (gcPlayer . plPosition . ptX) .~ 10.0
+  putStrLn $ "New config after moving player: " ++ show newConfig
+
+  -- Modify a nested value using `over`.
+  let harderConfig = over gcDifficulty (*2) newConfig
+  putStrLn $ "Harder config: " ++ show harderConfig
+
+-- --- 8.5 Unsafe Operations ---
+-- These should be used with extreme caution as they can break type safety
+-- and referential transparency.
+
+-- `unsafePerformIO` can be used to smuggle IO actions into pure code.
+-- This creates a "pure" function that returns a different value on each call.
+{-# NOINLINE globalCounter #-}
+globalCounter :: IORef Int
+globalCounter = unsafePerformIO (newIORef 0)
+
+nextGlobalId :: () -> Int
+nextGlobalId () = unsafePerformIO $ atomicModifyIORef' globalCounter (\c -> (c+1, c+1))
+
+unsafeExample :: IO ()
+unsafeExample = do
+  putStrLn "Calling a 'pure' function that uses unsafePerformIO:"
+  print (nextGlobalId ())
+  print (nextGlobalId ())
+  print (nextGlobalId ())
+
+  -- `unsafeCoerce` changes a type without any checks. This is extremely
+  -- dangerous and can easily lead to segmentation faults.
+  let i :: Int = 42
+  let s :: String = unsafeCoerce i
+  -- Trying to print `s` will likely crash the program.
+  putStrLn "The following line will probably crash if uncommented:"
+  -- putStrLn s
+  putStrLn "Survived unsafeCoerce (this time)."
+
+-- =============================================================================
+-- SECTION 9: MAIN ENTRY POINT
+-- =============================================================================
+-- The `main` function is the entry point of the program. It orchestrates calls
+-- to the various example functions defined throughout the file.
+
+main :: IO ()
+main = do
+  putStrLn "--- Haskell Feature Showcase ---"
+
+  -- Section 1 & 2: Data Types & Typeclasses
+  putStrLn "\n--- Data Types & Typeclasses ---"
+  let myPerson = Person "John Doe" 30 (Address "123 Main St" "Anytown" "12345")
+  putStrLn $ "SimpleJSON for Person: " ++ toSimpleJson myPerson
+  let personJson = A.encode myPerson
+  putStrLn $ "Aeson JSON for Person: " ++ show (personJson :: BL.ByteString)
+  logIO myPerson
+
+  -- Section 3: Template Haskell
+  putStrLn "\n--- Template Haskell ---"
+  putStrLn "Calling function generated by TH:"
+  debugPrintPerson myPerson
+
+  -- Section 4: Functions
+  putStrLn "\n--- Functions ---"
+  putStrLn $ "Factorial of 10 is " ++ show (factorial 10)
+  putStrLn $ "Pythagorean triples up to 20: " ++ show (pythagoreanTriples 20)
+  putStrLn $ "First 10 primes: " ++ show (take 10 primes)
+  putStrLn "Interpreting turtle commands to draw a square..."
+  let finalTurtleState = interpretCommands initialTurtleState drawSquare
+  putStrLn $ "Final turtle state: " ++ show finalTurtleState
+
+  -- Section 5: Monads
+  putStrLn "\n--- Monads and IO ---"
+  putStrLn "Running application with monad transformers..."
+  runApplication
+
+  -- Section 6: Concurrency
+  putStrLn "\n--- Concurrency ---"
+  putStrLn "Running MVar example..."
+  mvarExample
+  putStrLn "Running STM example..."
+  stmExample
+
+  -- Section 7: Data Structures
+  putStrLn "\n--- Data Structures ---"
+  putStrLn $ "Looking for Bob in phonebook: " ++ findPhoneNumber "Bob" phoneBookExample
+  putStrLn "Set operations example:"
+  setExample
+  putStrLn "Calculating sum of 1 million random numbers in a Vector..."
+  s <- vectorSum
+  printf "Vector sum: %.4f\n" s
+
+  -- Section 8: Advanced Features
+  putStrLn "\n--- Advanced Features ---"
+  putStrLn "--- FFI ---"
+  ffiExample
+  putStrLn "\n--- Type Families ---"
+  let serializedInt = serialize (123 :: Int)
+  putStrLn $ "Serialized Int: " ++ serializedInt
+  let deserializedInt = deserialize serializedInt :: Int
+  putStrLn $ "Deserialized Int: " ++ show deserializedInt
+  putStrLn "\n--- Rank-N Types ---"
+  putStrLn $ "Rank-N Example result: " ++ show rankNExample
+  putStrLn "\n--- Lens ---"
+  lensExample
+  putStrLn "\n--- Unsafe Operations ---"
+  unsafeExample
+
+  putStrLn "\n--- Showcase Complete ---"
+
+-- Helper for logging to IO using our Loggable typeclass.
+logIO :: Loggable a => a -> IO ()
+logIO = putStrLn . ("LOG: " ++) . logMessage
+
+-- Helper for running an IO action and catching any exceptions.
+catchAndRun :: IO () -> IO ()
+catchAndRun action = do
+  result <- try action
+  case result of
+    Left (e :: SomeException) -> hPutStrLn stderr $ "Caught exception: " ++ show e
+    Right () -> putStrLn "Action completed successfully."

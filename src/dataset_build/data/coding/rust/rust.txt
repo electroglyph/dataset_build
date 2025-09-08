@@ -1,0 +1,1123 @@
+//
+// A comprehensive tour of the Rust programming language in a single file.
+// This code is intended for dataset creation to analyze language feature importance.
+//
+
+// Crate-level attributes to manage compiler warnings and enable features.
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+#![allow(unused_imports)]
+#![allow(unreachable_code)]
+#![allow(unused_macros)]
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
+#![feature(decl_macro)]
+#![feature(box_syntax)]
+
+// ============== 1. IMPORTS & MODULES ==============
+// Using standard library features.
+use std::borrow::Cow;
+use std::cell::{Cell, RefCell};
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, LinkedList, VecDeque};
+use std::convert::{From, Into};
+use std::error::Error;
+use std::fmt::{self, Debug, Display};
+use std::fs::File;
+use std::io::{self, Write};
+use std::marker::PhantomData;
+use std::mem;
+use std::ops::{Add, Deref, DerefMut, Index, Mul};
+use std::pin::Pin;
+use std::ptr;
+use std::rc::Rc;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Barrier, Condvar, Mutex, RwLock};
+use std::thread;
+use std::time::{Duration, Instant};
+
+// Inline module declaration.
+mod basic_concepts {
+    // Public constant
+    pub const PI: f64 = 3.14159265359;
+
+    // A public function within a module
+    pub fn demonstrate_basics() {
+        println!("\n--- Basic Concepts ---");
+
+        // Variables and mutability
+        let immutable_var = 1;
+        let mut mutable_var = 2;
+        mutable_var += 1;
+        println!("Immutable: {}, Mutable: {}", immutable_var, mutable_var);
+
+        // Type annotations
+        let logical: bool = true;
+        let a_float: f64 = 1.0;
+        let an_integer = 5i32;
+
+        // Type inference
+        let default_float = 3.0; // f64
+        let default_integer = 7; // i32
+
+        // Shadowing
+        let shadowed_binding = 1;
+        {
+            let shadowed_binding = "abc";
+            println!("Inner shadowed: {}", shadowed_binding);
+        }
+        println!("Outer shadowed: {}", shadowed_binding);
+
+        // Literals and operators
+        println!("1 + 2 = {}", 1u32 + 2);
+        println!("1 - 2 = {}", 1i32 - 2);
+        println!("true AND false is {}", true && false);
+        println!("1M is {}", 1_000_000u32);
+        println!("Hex: {:X}, Octal: {:o}, Binary: {:b}", 255, 255, 255);
+
+        // Tuples
+        let long_tuple = (1u8, 2u16, 3u32, 4u64, -1i8, -2i16, -3i32, -4i64, 0.1f32, 0.2f64, 'a', true);
+        println!("First value of long tuple: {}", long_tuple.0);
+        let (a, b, ..) = long_tuple; // Destructuring
+        println!("Destructured from tuple: a={}, b={}", a, b);
+
+        // Arrays (fixed size)
+        let arr: [i32; 5] = [1, 2, 3, 4, 5];
+        let same_arr = [3; 10]; // [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+        println!("Array element at index 2: {}", arr[2]);
+        // Slicing an array
+        let slice: &[i32] = &arr[1..4];
+        println!("Slice: {:?}", slice);
+    }
+}
+
+// ============== 2. DATA STRUCTURES (STRUCTS & ENUMS) ==============
+mod data_structures {
+
+    // A classic C-style struct
+    #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+    struct Point {
+        x: f64,
+        y: f64,
+    }
+
+    // A tuple struct
+    struct Color(u8, u8, u8);
+
+    // A unit struct
+    struct Unit;
+
+    // Struct with generic parameters and lifetime
+    struct Rectangle<'a, T> {
+        top_left: Point,
+        bottom_right: Point,
+        metadata: &'a T,
+    }
+
+    // Enum for web events
+    #[derive(Debug)]
+    enum WebEvent {
+        PageLoad,
+        PageUnload,
+        KeyPress(char),
+        Paste(String),
+        Click { x: i64, y: i64 },
+    }
+    
+    // Enum with C-like discriminant values
+    #[repr(u32)]
+    enum Status {
+        Ok = 200,
+        NotFound = 404,
+        InternalError = 500,
+    }
+
+    pub fn demonstrate_data_structures() {
+        println!("\n--- Data Structures ---");
+
+        let p1 = Point { x: 0.3, y: 0.4 };
+        let p2 = Point { x: 1.0, y: 2.0 };
+        println!("Point 1: ({}, {})", p1.x, p1.y);
+
+        // Struct update syntax
+        let p3 = Point { x: 5.0, ..p2 };
+        println!("Point 3 (from p2): ({}, {})", p3.x, p3.y);
+
+        let black = Color(0, 0, 0);
+        println!("Color: ({}, {}, {})", black.0, black.1, black.2);
+
+        let metadata_info = "important data";
+        let rect = Rectangle {
+            top_left: p1,
+            bottom_right: p3,
+            metadata: &metadata_info,
+        };
+        println!("Rectangle with metadata: {}", rect.metadata);
+
+        // Using enums
+        let key_press = WebEvent::KeyPress('x');
+        let click = WebEvent::Click { x: 20, y: 80 };
+        let load = WebEvent::PageLoad;
+
+        inspect_event(key_press);
+        inspect_event(click);
+        inspect_event(load);
+        
+        let status_code = Status::NotFound as u32;
+        println!("Status code for Not Found: {}", status_code);
+    }
+
+    // Function that uses pattern matching on an enum
+    fn inspect_event(event: WebEvent) {
+        match event {
+            WebEvent::PageLoad => println!("Page loaded"),
+            WebEvent::PageUnload => println!("Page unloaded"),
+            WebEvent::KeyPress(c) => println!("Pressed '{}'.", c),
+            WebEvent::Paste(s) => println!("Pasted \"{}\".", s),
+            WebEvent::Click { x, y } => {
+                println!("Clicked at x={}, y={}.", x, y);
+            }
+        }
+    }
+}
+
+// ============== 3. CONTROL FLOW & PATTERN MATCHING ==============
+mod control_flow {
+    pub fn demonstrate_control_flow() {
+        println!("\n--- Control Flow & Pattern Matching ---");
+
+        // `if-else` is an expression
+        let n = 13;
+        let description = if n % 2 == 0 {
+            "even"
+        } else {
+            "odd"
+        };
+        println!("{} is {}", n, description);
+
+        // `loop` with labels
+        let mut count = 0u32;
+        'counting_up: loop {
+            println!("count = {}", count);
+            let mut remaining = 10;
+            loop {
+                println!("remaining = {}", remaining);
+                if remaining == 9 {
+                    break; // breaks the inner loop
+                }
+                if count == 2 {
+                    break 'counting_up; // breaks the outer loop
+                }
+                remaining -= 1;
+            }
+            count += 1;
+        }
+
+        // `for` loop over a range
+        for i in 1..=5 {
+            print!("{} ", i);
+        }
+        println!();
+
+        // `match` with destructuring and guards
+        let pair = (5, -5);
+        match pair {
+            (x, y) if x == y => println!("These are twins"),
+            (x, y) if x + y == 0 => println!("Antimatter, kaboom!"),
+            (x, _) if x % 2 == 1 => println!("The first one is odd"),
+            _ => println!("No correlation..."),
+        }
+
+        // `if let` for simpler matching
+        let number: Option<i32> = Some(7);
+        if let Some(i) = number {
+            println!("Matched {:?}!", i);
+        }
+
+        // `while let` loop
+        let mut optional = Some(0);
+        while let Some(i) = optional {
+            if i > 9 {
+                println!("Greater than 9, quit!");
+                optional = None;
+            } else {
+                println!("`i` is `{:?}`. Try again.", i);
+                optional = Some(i + 1);
+            }
+        }
+    }
+}
+
+// ============== 4. OWNERSHIP, BORROWING, AND LIFETIMES ==============
+mod memory_management {
+    #[derive(Debug)]
+    struct Foo {
+        x: i32,
+    }
+
+    // A function that takes ownership
+    fn takes_ownership(f: Foo) {
+        println!("Took ownership of Foo with x = {}", f.x);
+        // f is dropped here
+    }
+
+    // A function that borrows
+    fn borrows(f: &Foo) {
+        println!("Borrowed Foo with x = {}", f.x);
+    }
+
+    // A function that mutably borrows
+    fn mutably_borrows(f: &mut Foo) {
+        f.x += 1;
+        println!("Mutably borrowed and changed Foo's x to {}", f.x);
+    }
+    
+    // A function with explicit lifetime annotation
+    // This function returns a reference, so the compiler needs to know its lifetime.
+    // It says the returned reference will live as long as the shortest of `x` and `y`.
+    fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+        if x.len() > y.len() {
+            x
+        } else {
+            y
+        }
+    }
+    
+    // A struct holding a reference needs a lifetime annotation.
+    struct ImportantExcerpt<'a> {
+        part: &'a str,
+    }
+
+    impl<'a> ImportantExcerpt<'a> {
+        // A method on a struct with a lifetime
+        fn announce_and_return_part(&self, announcement: &str) -> &str {
+            println!("Attention please: {}", announcement);
+            self.part
+        }
+    }
+
+    pub fn demonstrate_memory() {
+        println!("\n--- Ownership, Borrowing, Lifetimes ---");
+        
+        let f1 = Foo { x: 10 };
+        borrows(&f1); // Borrows f1, f1 is still valid.
+        println!("f1 is still available: {:?}", f1);
+        
+        let mut f2 = Foo { x: 20 };
+        mutably_borrows(&f2); // Mutably borrows f2.
+        
+        // This would fail to compile because f3 is moved.
+        // let f3 = Foo { x: 30 };
+        // takes_ownership(f3);
+        // println!("{:?}", f3); // Error: value borrowed here after move
+        
+        let string1 = String::from("long string is long");
+        let result;
+        {
+            let string2 = String::from("xyz");
+            result = longest(string1.as_str(), string2.as_str());
+            println!("The longest string is {}", result);
+        }
+        // result is now invalid because string2 is out of scope.
+        // But the previous print works because both strings were valid in that scope.
+        
+        let novel = String::from("Call me Ishmael. Some years ago...");
+        let first_sentence = novel.split('.').next().expect("Could not find a '.'");
+        let i = ImportantExcerpt { part: first_sentence };
+        i.announce_and_return_part("New excerpt!");
+
+        // 'static lifetime
+        let s: &'static str = "I have a static lifetime.";
+        println!("{}", s);
+    }
+}
+
+// ============== 5. GENERICS, TRAITS, AND METHOD SYNTAX ==============
+mod advanced_types {
+    use super::*; // Bring parent module's items into scope
+
+    // A generic function
+    fn swap<T>(a: &mut T, b: &mut T) {
+        mem::swap(a, b);
+    }
+
+    // A generic struct
+    #[derive(Debug)]
+    struct Pair<T> {
+        first: T,
+        second: T,
+    }
+
+    // Trait definition
+    trait Summary {
+        fn summarize_author(&self) -> String;
+
+        fn summarize(&self) -> String {
+            format!("(Read more from {}...)", self.summarize_author())
+        }
+    }
+
+    // A struct we'll implement the trait for
+    pub struct NewsArticle {
+        pub headline: String,
+        pub location: String,
+        pub author: String,
+        pub content: String,
+    }
+
+    // Implementing the trait for our struct
+    impl Summary for NewsArticle {
+        fn summarize_author(&self) -> String {
+            format!("@{}", self.author)
+        }
+    }
+
+    // Another struct to implement the trait for
+    pub struct Tweet {
+        pub username: String,
+        pub content: String,
+        pub reply: bool,
+        pub retweet: bool,
+    }
+
+    impl Summary for Tweet {
+        fn summarize_author(&self) -> String {
+            format!("@{}", self.username)
+        }
+        fn summarize(&self) -> String {
+            format!("{}: {}", self.username, self.content)
+        }
+    }
+
+    // Function taking a generic type with a trait bound (impl Trait syntax)
+    pub fn notify(item: &impl Summary) {
+        println!("Breaking news! {}", item.summarize());
+    }
+    
+    // The same function with the longer trait bound syntax
+    pub fn notify_long<T: Summary>(item: &T) {
+        println!("Breaking news! {}", item.summarize());
+    }
+
+    // Using `where` clause for more complex trait bounds
+    fn some_function<T, U>(t: &T, u: &U)
+    where
+        T: Display + Clone,
+        U: Clone + Debug,
+    {
+        // ...
+    }
+    
+    // Returning a type that implements a trait
+    fn returns_summarizable() -> impl Summary {
+        Tweet {
+            username: String::from("horse_ebooks"),
+            content: String::from("of course, as you probably already know, people"),
+            reply: false,
+            retweet: false,
+        }
+    }
+    
+    // Associated types in traits
+    trait Container {
+        type Item;
+        fn add_item(&mut self, item: Self::Item);
+        fn get_item(&self, index: usize) -> Option<&Self::Item>;
+    }
+    
+    impl<T> Container for Vec<T> {
+        type Item = T;
+        fn add_item(&mut self, item: T) {
+            self.push(item);
+        }
+        fn get_item(&self, index: usize) -> Option<&T> {
+            self.get(index)
+        }
+    }
+    
+    // Super-traits
+    trait Person {
+        fn name(&self) -> String;
+    }
+    
+    trait Student: Person {
+        fn university(&self) -> String;
+    }
+    
+    struct EngineeringStudent {
+        name: String,
+        university: String,
+    }
+    
+    impl Person for EngineeringStudent {
+        fn name(&self) -> String { self.name.clone() }
+    }
+    
+    impl Student for EngineeringStudent {
+        fn university(&self) -> String { self.university.clone() }
+    }
+    
+    fn student_info(student: &impl Student) {
+        println!("Student: {}, University: {}", student.name(), student.university());
+    }
+
+    // A struct to demonstrate methods and associated functions
+    #[derive(Debug)]
+    struct Circle {
+        radius: f64,
+    }
+
+    // `impl` block for methods
+    impl Circle {
+        // Associated function (like a static method)
+        fn new(radius: f64) -> Circle {
+            Circle { radius }
+        }
+
+        // Method with immutable borrow of self
+        fn area(&self) -> f64 {
+            std::f64::consts::PI * self.radius * self.radius
+        }
+        
+        // Method with mutable borrow of self
+        fn scale(&mut self, factor: f64) {
+            self.radius *= factor;
+        }
+
+        // Method that takes ownership of self
+        fn into_radius(self) -> f64 {
+            self.radius
+        }
+    }
+
+    pub fn demonstrate_generics_and_traits() {
+        println!("\n--- Generics, Traits, and Methods ---");
+        
+        let mut x = 5;
+        let mut y = 10;
+        swap(&mut x, &mut y);
+        println!("Swapped: x={}, y={}", x, y);
+
+        let pair = Pair { first: 1.0, second: 2.0 };
+        println!("Generic pair: {:?}", pair);
+
+        let tweet = Tweet {
+            username: String::from("jack"),
+            content: String::from("just setting up my twttr"),
+            reply: false,
+            retweet: false,
+        };
+        notify(&tweet);
+        
+        let student = EngineeringStudent {
+            name: "Alice".to_string(),
+            university: "MIT".to_string(),
+        };
+        student_info(&student);
+
+        let mut c = Circle::new(10.0);
+        println!("Circle area: {}", c.area());
+        c.scale(1.5);
+        println!("Scaled circle area: {}", c.area());
+        let radius = c.into_radius();
+        println!("Radius from owned circle: {}", radius);
+        // c is no longer valid here
+    }
+}
+
+// ============== 6. ERROR HANDLING ==============
+mod error_handling {
+    use super::*; // For Error, io, fmt
+
+    // Custom Error Type
+    #[derive(Debug)]
+    enum MyError {
+        Io(io::Error),
+        Parse(std::num::ParseIntError),
+        Custom(String),
+    }
+
+    // Implement Display for our error type
+    impl fmt::Display for MyError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                MyError::Io(e) => write!(f, "IO Error: {}", e),
+                MyError::Parse(e) => write!(f, "Parse Error: {}", e),
+                MyError::Custom(s) => write!(f, "Custom Error: {}", s),
+            }
+        }
+    }
+
+    // Implement the standard Error trait
+    impl Error for MyError {
+        fn source(&self) -> Option<&(dyn Error + 'static)> {
+            match self {
+                MyError::Io(e) => Some(e),
+                MyError::Parse(e) => Some(e),
+                MyError::Custom(_) => None,
+            }
+        }
+    }
+
+    // Implement From for easy conversions, enabling the `?` operator
+    impl From<io::Error> for MyError {
+        fn from(err: io::Error) -> MyError {
+            MyError::Io(err)
+        }
+    }
+
+    impl From<std::num::ParseIntError> for MyError {
+        fn from(err: std::num::ParseIntError) -> MyError {
+            MyError::Parse(err)
+        }
+    }
+
+    // A function that can fail and uses the `?` operator
+    fn multiply(first_number_str: &str, second_number_str: &str) -> Result<i32, MyError> {
+        let first_number = first_number_str.parse::<i32>()?;
+        let second_number = second_number_str.parse::<i32>()?;
+        
+        if first_number == 0 || second_number == 0 {
+            // Creating a custom error variant
+            return Err(MyError::Custom("Cannot multiply by zero".to_string()));
+        }
+
+        Ok(first_number * second_number)
+    }
+    
+    // A function that might panic
+    fn can_panic(divisor: i32) {
+        if divisor == 0 {
+            panic!("Division by zero!");
+        }
+        let _ = 10 / divisor;
+    }
+
+    pub fn demonstrate_error_handling() {
+        println!("\n--- Error Handling ---");
+        
+        // Handling Result
+        match multiply("10", "2") {
+            Ok(v) => println!("Result: {}", v),
+            Err(e) => println!("Error: {}", e),
+        }
+
+        match multiply("t", "2") {
+            Ok(v) => println!("Result: {}", v),
+            Err(e) => {
+                println!("Error: {}", e);
+                if let Some(source) = e.source() {
+                    println!("  Caused by: {}", source);
+                }
+            }
+        }
+        
+        // Using Option
+        let numbers = vec![1, 2, 3];
+        let fourth = numbers.get(3);
+        match fourth {
+            Some(val) => println!("Fourth element is {}", val),
+            None => println!("No fourth element."),
+        }
+        
+        // Chaining Option methods
+        let maybe_word = Some("hello");
+        let word_length = maybe_word.map(|w| w.len()).unwrap_or(0);
+        println!("Word length: {}", word_length);
+    }
+}
+
+// ============== 7. CLOSURES AND ITERATORS ==============
+mod closures_and_iterators {
+    pub fn demonstrate_closures() {
+        println!("\n--- Closures and Iterators ---");
+        
+        // A simple closure
+        let add_one = |x: u32| -> u32 { x + 1 };
+        println!("3 + 1 = {}", add_one(3));
+        
+        // A closure that captures its environment
+        let color = String::from("green");
+        let print_color = || println!("Color: {}", color);
+        print_color();
+        // `color` is borrowed here, so it can still be used
+        println!("Can still use color: {}", color);
+        
+        // A mutable capture
+        let mut count = 0;
+        let mut inc = || {
+            count += 1;
+            println!("Count is now {}", count);
+        };
+        inc();
+        inc();
+        
+        // Forcing a move with `move` keyword
+        let movable = Box::new(3);
+        let consume = move || {
+            println!("movable: {:?}", movable);
+            // `movable` is dropped here
+        };
+        consume();
+        // `movable` is no longer valid here
+        
+        // Using iterators and their adaptors
+        let numbers = vec![1, 2, 3, 4, 5];
+        let sum_of_squares_of_evens: i32 = numbers
+            .iter() // Create an iterator
+            .filter(|&&x| x % 2 == 0) // Keep only even numbers
+            .map(|&x| x * x) // Square each number
+            .sum(); // Sum them up
+        println!("Sum of squares of even numbers: {}", sum_of_squares_of_evens);
+
+        // `collect` into a different collection
+        let doubled: Vec<_> = numbers.iter().map(|x| x * 2).collect();
+        println!("Doubled vector: {:?}", doubled);
+    }
+
+    // A custom iterator
+    struct Fibonacci {
+        curr: u32,
+        next: u32,
+    }
+
+    impl Iterator for Fibonacci {
+        type Item = u32;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let new_next = self.curr + self.next;
+            self.curr = self.next;
+            self.next = new_next;
+            Some(self.curr)
+        }
+    }
+    
+    pub fn demonstrate_custom_iterator() {
+        let fib = Fibonacci { curr: 0, next: 1 };
+        println!("First 10 Fibonacci numbers: {:?}", fib.take(10).collect::<Vec<_>>());
+    }
+}
+
+// ============== 8. SMART POINTERS ==============
+mod smart_pointers {
+    use super::*; // For Rc, RefCell, etc.
+
+    // Using Box<T> for heap allocation
+    struct Node {
+        value: i32,
+        next: Option<Box<Node>>,
+    }
+
+    // Using Rc<T> for multiple ownership
+    enum List {
+        Cons(i32, Rc<List>),
+        Nil,
+    }
+
+    pub fn demonstrate_smart_pointers() {
+        println!("\n--- Smart Pointers ---");
+        
+        // Box<T>
+        let b = Box::new(5);
+        println!("b = {}", b);
+        let list = Node { value: 1, next: Some(Box::new(Node { value: 2, next: None })) };
+        
+        // Rc<T>
+        let a = Rc::new(List::Cons(5, Rc::new(List::Cons(10, Rc::new(List::Nil)))));
+        println!("Count after creating a = {}", Rc::strong_count(&a));
+        let b = List::Cons(3, Rc::clone(&a));
+        println!("Count after creating b = {}", Rc::strong_count(&a));
+        {
+            let c = List::Cons(4, Rc::clone(&a));
+            println!("Count after creating c = {}", Rc::strong_count(&a));
+        }
+        println!("Count after c goes out of scope = {}", Rc::strong_count(&a));
+        
+        // RefCell<T> for interior mutability
+        let shared_data = Rc::new(RefCell::new(String::from("hello")));
+        
+        let clone1 = Rc::clone(&shared_data);
+        let clone2 = Rc::clone(&shared_data);
+        
+        // Mutably borrow through an immutable reference
+        clone1.borrow_mut().push_str(" world");
+        
+        println!("Data after modification: {}", clone2.borrow());
+        
+        // This would panic at runtime if another mutable borrow exists.
+        // let mut borrow1 = shared_data.borrow_mut();
+        // let mut borrow2 = shared_data.borrow_mut();
+    }
+    
+    // Custom Smart Pointer with Deref and Drop
+    struct MyBox<T>(T);
+    
+    impl<T> MyBox<T> {
+        fn new(x: T) -> MyBox<T> {
+            MyBox(x)
+        }
+    }
+    
+    impl<T> Deref for MyBox<T> {
+        type Target = T;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    
+    impl<T> Drop for MyBox<T> {
+        fn drop(&mut self) {
+            println!("Dropping MyBox!");
+        }
+    }
+    
+    pub fn demonstrate_custom_smart_pointer() {
+        let x = 5;
+        let y = MyBox::new(x);
+        
+        assert_eq!(5, x);
+        assert_eq!(5, *y); // *y is implicitly calling *(y.deref())
+        
+        println!("MyBox will be dropped at the end of this function.");
+    }
+}
+
+// ============== 9. CONCURRENCY & ASYNC ==============
+mod concurrency {
+    use super::*;
+    use std::time::Duration;
+
+    pub fn demonstrate_threads() {
+        println!("\n--- Concurrency: Threads ---");
+        
+        let handle = thread::spawn(|| {
+            for i in 1..10 {
+                println!("hi number {} from the spawned thread!", i);
+                thread::sleep(Duration::from_millis(1));
+            }
+        });
+
+        for i in 1..5 {
+            println!("hi number {} from the main thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+
+        handle.join().unwrap();
+        
+        // Using `move` with threads
+        let v = vec![1, 2, 3];
+        let handle = thread::spawn(move || {
+            println!("Here's a vector: {:?}", v);
+        });
+        handle.join().unwrap();
+    }
+    
+    pub fn demonstrate_channels() {
+        println!("\n--- Concurrency: Channels (mpsc) ---");
+        
+        let (tx, rx): (Sender<String>, Receiver<String>) = channel();
+        let tx2 = tx.clone();
+        
+        thread::spawn(move || {
+            let vals = vec![
+                String::from("hi"),
+                String::from("from"),
+                String::from("the"),
+                String::from("thread"),
+            ];
+            for val in vals {
+                tx.send(val).unwrap();
+                thread::sleep(Duration::from_secs(1));
+            }
+        });
+        
+        thread::spawn(move || {
+            tx2.send(String::from("more messages")).unwrap();
+        });
+
+        for received in rx {
+            println!("Got: {}", received);
+        }
+    }
+
+    pub fn demonstrate_shared_state() {
+        println!("\n--- Concurrency: Shared State (Mutex) ---");
+        
+        let counter = Arc::new(Mutex::new(0));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let counter = Arc::clone(&counter);
+            let handle = thread::spawn(move || {
+                let mut num = counter.lock().unwrap();
+                *num += 1;
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        println!("Result: {}", *counter.lock().unwrap());
+    }
+    
+    // Async/await demonstration
+    async fn learn_song() -> String {
+        println!("Learning song...");
+        // Simulate a long-running task
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        "Song learned".to_string()
+    }
+    
+    async fn sing_song(song: String) {
+        println!("Singing song: {}", song);
+    }
+    
+    async fn dance() {
+        println!("Dancing...");
+    }
+
+    async fn learn_and_sing() {
+        let song = learn_song().await;
+        sing_song(song).await;
+    }
+
+    pub async fn demonstrate_async() {
+        println!("\n--- Concurrency: Async/Await ---");
+        
+        let f1 = learn_and_sing();
+        let f2 = dance();
+        
+        // `join!` runs multiple futures concurrently
+        futures::join!(f1, f2);
+    }
+}
+
+// ============== 10. UNSAFE RUST & FFI ==============
+mod unsafe_code {
+
+    // A C library function signature
+    extern "C" {
+        fn abs(input: i32) -> i32;
+    }
+
+    // A safe wrapper around an unsafe function
+    fn call_c_abs(x: i32) -> i32 {
+        unsafe { abs(x) }
+    }
+    
+    // Modifying a mutable static variable (unsafe)
+    static mut COUNTER: u32 = 0;
+
+    fn add_to_count(inc: u32) {
+        unsafe {
+            COUNTER += inc;
+        }
+    }
+
+    // An unsafe trait
+    unsafe trait UnsafeTrait {
+        // methods go here
+    }
+    
+    // Unsafe implementation
+    unsafe impl UnsafeTrait for i32 {}
+    
+    // A C-compatible union
+    #[repr(C)]
+    union MyUnion {
+        f1: u32,
+        f2: f32,
+    }
+
+    pub fn demonstrate_unsafe() {
+        println!("\n--- Unsafe Rust & FFI ---");
+        
+        // Raw pointers
+        let mut num = 5;
+        let r1 = &num as *const i32;
+        let r2 = &mut num as *mut i32;
+        
+        unsafe {
+            println!("r1 is: {}", *r1);
+            *r2 = 10;
+            println!("num is now: {}", num);
+        }
+        
+        // Calling an unsafe function
+        add_to_count(3);
+        unsafe {
+            println!("COUNTER: {}", COUNTER);
+        }
+
+        // Using the FFI wrapper
+        println!("Absolute value of -3 according to C: {}", call_c_abs(-3));
+        
+        // Using a union
+        let mut u = MyUnion { f1: 1_078_523_331 }; // Represents approx 3.14 in f32
+        unsafe {
+            println!("Union as int: {}, as float: {}", u.f1, u.f2);
+        }
+    }
+}
+
+// ============== 11. METAPROGRAMMING (MACROS) ==============
+mod metaprogramming {
+
+    // A declarative macro `macro_rules!`
+    macro_rules! my_vec {
+        // Match a comma-separated list of expressions
+        ( $( $x:expr ),* ) => {
+            {
+                let mut temp_vec = Vec::new();
+                $(
+                    temp_vec.push($x);
+                )*
+                temp_vec
+            }
+        };
+    }
+
+    // A more complex macro with multiple arms
+    macro_rules! find_min {
+        ($x:expr) => ($x);
+        ($x:expr, $($y:expr),+) => (
+            std::cmp::min($x, find_min!($($y),+))
+        )
+    }
+
+    pub fn demonstrate_macros() {
+        println!("\n--- Metaprogramming: Macros ---");
+        
+        let v = my_vec![1, 2, 3, 4];
+        println!("Created a vector with a macro: {:?}", v);
+        
+        let min_val = find_min!(5, 2, 8, 1, 9);
+        println!("Minimum value found with macro: {}", min_val);
+        
+        // Procedural macros are used via attributes, but defined in separate crates.
+        // Example usages:
+        // #[derive(Debug, Serialize, Deserialize)] // Custom derive
+        // #[get("/users/<id>")] // Attribute-like
+        // let user = sql!("SELECT * FROM users"); // Function-like
+        println!("Procedural macros like `derive` are common but defined elsewhere.");
+    }
+}
+
+// ============== 12. ADVANCED TOPICS ==============
+mod advanced {
+    use super::*;
+
+    // Type aliases
+    type Kilometers = i32;
+    
+    // The "never" type `!`, which never returns
+    fn bar() -> ! {
+        panic!("This function never returns!");
+    }
+
+    // Higher-Ranked Trait Bounds (HRTB)
+    fn do_twice<F>(mut func: F) where F: FnMut(i32) {
+        func(1);
+        func(2);
+    }
+    
+    // Conditional compilation
+    #[cfg(target_os = "linux")]
+    fn on_linux() {
+        println!("This code only runs on Linux.");
+    }
+    
+    #[cfg(not(target_os = "linux"))]
+    fn on_linux() {
+        println!("This code does NOT run on Linux.");
+    }
+    
+    // Using PhantomData for generic types that don't use the type parameter
+    struct MyContainer<T> {
+        data: Vec<u8>,
+        _marker: PhantomData<T>,
+    }
+    
+    impl<T> MyContainer<T> {
+        fn new() -> Self {
+            MyContainer { data: Vec::new(), _marker: PhantomData }
+        }
+    }
+
+    pub fn demonstrate_advanced() {
+        println!("\n--- Advanced Topics ---");
+        
+        let distance: Kilometers = 5;
+        let distance_in_m = 5000;
+        println!("Total distance: {}", distance + distance_in_m);
+        
+        let mut x = 0;
+        do_twice(|i| x += i);
+        println!("`do_twice` result: {}", x);
+        
+        on_linux();
+        
+        let container: MyContainer<String> = MyContainer::new();
+        println!("PhantomData allows unused generic parameters to exist.");
+    }
+}
+
+// ============== MAIN FUNCTION ==============
+#[tokio::main]
+async fn main() {
+    println!("===== RUST LANGUAGE FEATURE SHOWCASE =====");
+
+    // 1. Basics
+    basic_concepts::demonstrate_basics();
+
+    // 2. Data Structures
+    data_structures::demonstrate_data_structures();
+
+    // 3. Control Flow
+    control_flow::demonstrate_control_flow();
+
+    // 4. Memory Management
+    memory_management::demonstrate_memory();
+
+    // 5. Generics and Traits
+    advanced_types::demonstrate_generics_and_traits();
+
+    // 6. Error Handling
+    error_handling::demonstrate_error_handling();
+
+    // 7. Closures and Iterators
+    closures_and_iterators::demonstrate_closures();
+    closures_and_iterators::demonstrate_custom_iterator();
+    
+    // 8. Smart Pointers
+    smart_pointers::demonstrate_smart_pointers();
+    smart_pointers::demonstrate_custom_smart_pointer();
+
+    // 9. Concurrency & Async
+    concurrency::demonstrate_threads();
+    concurrency::demonstrate_channels();
+    concurrency::demonstrate_shared_state();
+    concurrency::demonstrate_async().await; // Note the .await
+
+    // 10. Unsafe Code
+    unsafe_code::demonstrate_unsafe();
+
+    // 11. Metaprogramming
+    metaprogramming::demonstrate_macros();
+    
+    // 12. Advanced Topics
+    advanced::demonstrate_advanced();
+
+    println!("\n===== END OF SHOWCASE =====");
+}
+
+// Note: To compile and run this file, you would need to set up a Rust project
+// with `tokio` and `futures` as dependencies in `Cargo.toml`, e.g.:
+//
+// [dependencies]
+// tokio = { version = "1", features = ["full"] }
+// futures = "0.3"

@@ -1,0 +1,849 @@
+# comprehensive_elixir_example.ex
+#
+# This file contains a wide variety of Elixir code constructs,
+# intended to be used for training and analysis of language models.
+# It covers basics, data structures, OTP, metaprogramming, and more.
+
+# -----------------------------------------------------------------------------
+# Section 1: Core Language Concepts
+# -----------------------------------------------------------------------------
+
+defmodule Core.Basics do
+  @moduledoc """
+  Demonstrates fundamental Elixir syntax, functions, pattern matching, and guards.
+  """
+
+  # A module attribute, often used for constants.
+  @default_greeting "Hello"
+  @pi 3.14159
+
+  @typedoc "Represents a user with a name and an age"
+  @type user :: {String.t(), non_neg_integer()}
+
+  @doc """
+  Greets a person by name. Demonstrates a single-line function.
+  """
+  @spec greet(String.t()) :: String.t()
+  def greet(name), do: "#{@default_greeting}, #{name}!"
+
+  @doc """
+  Calculates the area of a shape.
+  This function uses pattern matching on tuples and guard clauses
+  to handle different shapes.
+  """
+  @spec area({:circle, number()}) :: float()
+  def area({:circle, radius}) when is_number(radius) and radius > 0 do
+    @pi * :math.pow(radius, 2)
+  end
+
+  @spec area({:rectangle, number(), number()}) :: number()
+  def area({:rectangle, width, height}) when width > 0 and height > 0 do
+    width * height
+  end
+
+  # Catch-all clause for invalid shapes or dimensions
+  @spec area(any()) :: {:error, :invalid_shape}
+  def area(_other) do
+    {:error, :invalid_shape}
+  end
+
+  @doc """
+  Processes a list of numbers using recursion and pattern matching.
+  """
+  @spec sum_list([number()]) :: number()
+  def sum_list(list) do
+    do_sum_list(list, 0)
+  end
+
+  # Private helper function with multiple clauses
+  @spec do_sum_list([number()], number()) :: number()
+  defp do_sum_list([], accumulator), do: accumulator
+  defp do_sum_list([head | tail], accumulator) when is_number(head) do
+    do_sum_list(tail, head + accumulator)
+  end
+
+  @doc """
+  Demonstrates the `cond` control flow structure.
+  """
+  @spec check_number(integer()) :: atom()
+  def check_number(n) do
+    cond do
+      n > 0 -> :positive
+      n < 0 -> :negative
+      n == 0 -> :zero
+      true -> :not_a_number # This will never be reached due to typespecs but is good practice
+    end
+  end
+
+  @doc """
+  Demonstrates the `case` statement for pattern matching on values.
+  """
+  @spec handle_response({:ok, any()} | {:error, any()}) :: String.t()
+  def handle_response(response) do
+    case response do
+      {:ok, data} -> "Success! Data: #{inspect(data)}"
+      {:error, :not_found} -> "Error: Resource not found."
+      {:error, reason} -> "An unknown error occurred: #{inspect(reason)}"
+      _ -> "Invalid response format."
+    end
+  end
+
+  @doc """
+  Shows a `with` statement for handling a sequence of operations
+  that can fail.
+  """
+  @spec process_data(map()) :: {:ok, String.t()} | {:error, atom()}
+  def process_data(params) do
+    with {:ok, user_id} <- Map.fetch(params, :user_id),
+         {:ok, user} <- find_user(user_id),
+         :ok <- authorize_user(user) do
+      # All steps succeeded
+      {:ok, "Processing data for #{user.name}"}
+    else
+      # One of the steps failed, pattern match on the error
+      :error -> {:error, :missing_user_id}
+      {:error, :not_found} -> {:error, :user_not_found}
+      {:error, :unauthorized} -> {:error, :authorization_failed}
+    end
+  end
+
+  # Helper functions for the `with` statement example
+  defp find_user(1), do: {:ok, %{id: 1, name: "Alice", role: :admin}}
+  defp find_user(2), do: {:ok, %{id: 2, name: "Bob", role: :user}}
+  defp find_user(_), do: {:error, :not_found}
+
+  defp authorize_user(%{role: :admin}), do: :ok
+  defp authorize_user(_), do: {:error, :unauthorized}
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 2: Data Structures and Comprehensions
+# -----------------------------------------------------------------------------
+
+defmodule Core.DataStructures do
+  @moduledoc """
+  Showcases Elixir's powerful data structures: Structs, Maps, Lists, etc.
+  """
+
+  # Defining a struct
+  defstruct name: "John Doe", age: 30, email: nil, tags: []
+
+  @type t :: %__MODULE__{
+    name: String.t(),
+    age: non_neg_integer(),
+    email: String.t() | nil,
+    tags: [String.t()]
+  }
+
+  @doc """
+  Creates and manipulates a user struct.
+  """
+  @spec create_and_update_user() :: t()
+  def create_and_update_user do
+    # Creating a new struct
+    user = %Core.DataStructures{name: "Alice", age: 28, email: "alice@example.com"}
+
+    # Updating a struct (immutable)
+    user_with_tags = %{user | tags: ["elixir", "developer"]}
+
+    # Accessing struct fields
+    IO.puts("User name: #{user_with_tags.name}")
+
+    # Pattern matching on a struct
+    %Core.DataStructures{name: name, age: age} = user_with_tags
+    IO.puts("#{name} is #{age} years old.")
+
+    user_with_tags
+  end
+
+  @doc """
+  Demonstrates map manipulation.
+  """
+  @spec work_with_maps() :: map()
+  def work_with_maps do
+    # Literal map syntax
+    config = %{host: "localhost", port: 4000, protocols: [:http, :https]}
+
+    # Accessing values
+    port = config.port # Dot syntax for atom keys
+    host = config[:host] # Bracket syntax for any key
+
+    # Adding/updating values
+    updated_config = Map.put(config, :timeout, 5000)
+    final_config = Map.put(updated_config, :host, "example.com")
+
+    IO.puts("Connecting to #{host}:#{port}")
+    final_config
+  end
+
+  @doc """
+  Demonstrates list and keyword list operations.
+  """
+  @spec work_with_lists() :: keyword()
+  def work_with_lists do
+    numbers = [1, 2, 3, 4, 5]
+    more_numbers = numbers ++ [6, 7, 8]
+    less_numbers = more_numbers -- [1, 5, 8] # [2, 3, 4, 6, 7]
+
+    # Keyword lists are lists of 2-element tuples, with atom keys
+    options = [verbose: true, log_level: :debug, output: "log.txt"]
+    # Reading a value
+    log_level = Keyword.get(options, :log_level) # :debug
+
+    IO.puts("Log level is #{log_level}")
+    IO.inspect(less_numbers, label: "Filtered numbers")
+    options
+  end
+
+  @doc """
+  Uses `for` comprehensions to build new collections.
+  """
+  @spec use_comprehensions() :: {list(), map()}
+  def use_comprehensions do
+    # Simple list comprehension
+    squared = for n <- [1, 2, 3, 4], do: n * n
+
+    # Comprehension with a filter
+    even_squared = for n <- [1, 2, 3, 4, 5, 6], rem(n, 2) == 0, do: n * n
+
+    # Comprehension into a map
+    users = [%{name: "A", score: 10}, %{name: "B", score: 20}]
+    scores_by_name = for %{name: name, score: score} <- users, into: %{}, do: {name, score}
+
+    # Binary comprehension
+    lowercase_b = for <<c <- "HELLO">>, into: "", do: <<c + 32>>
+
+    IO.puts("Lowercase 'HELLO' is #{lowercase_b}")
+
+    {even_squared, scores_by_name}
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 3: Enum and Stream Modules
+# -----------------------------------------------------------------------------
+
+defmodule DataProcessing.Pipeline do
+  @moduledoc """
+  Demonstrates eager vs. lazy processing with Enum and Stream.
+  """
+
+  @doc """
+  An eager pipeline using the Enum module.
+  Each step processes the entire list before passing to the next.
+  """
+  @spec eager_processing(list(integer())) :: integer()
+  def eager_processing(numbers) do
+    numbers
+    |> Enum.map(&(&1 * 3))
+    |> Enum.filter(&(rem(&1, 2) != 0))
+    |> Enum.reduce(0, &(&1 + &2))
+  end
+
+  @doc """
+  A lazy pipeline using the Stream module.
+  Each element goes through the entire pipeline one by one.
+  More memory efficient for large or infinite collections.
+  """
+  @spec lazy_processing(stream()) :: integer()
+  def lazy_processing(numbers_stream) do
+    numbers_stream
+    |> Stream.map(&(&1 * 3))
+    |> Stream.filter(&(rem(&1, 2) != 0))
+    |> Enum.reduce(0, &(&1 + &2)) # Enum is needed to trigger the stream
+  end
+
+  @doc """
+  Other useful Enum functions.
+  """
+  @spec other_enum_examples() :: :ok
+  def other_enum_examples do
+    people = [
+      %{name: "Alice", city: "New York", age: 29},
+      %{name: "Bob", city: "London", age: 35},
+      %{name: "Charlie", city: "New York", age: 35}
+    ]
+
+    # Group by city
+    people_by_city = Enum.group_by(people, &(&1.city))
+    IO.inspect(people_by_city, label: "People by City")
+
+    # Find the first person older than 30
+    first_person_over_30 = Enum.find(people, fn person -> person.age > 30 end)
+    IO.inspect(first_person_over_30, label: "First person over 30")
+
+    # Check if any person is from London
+    any_from_london? = Enum.any?(people, &(&1.city == "London"))
+    IO.puts("Any person from London? #{any_from_london?}")
+
+    # Sort by age
+    sorted_by_age = Enum.sort_by(people, &(&1.age))
+    IO.inspect(sorted_by_age, label: "Sorted by age")
+    :ok
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 4: Concurrency and OTP (Processes, GenServer, Supervisor)
+# -----------------------------------------------------------------------------
+
+defmodule Concurrency.SimpleProcess do
+  @moduledoc """
+  Demonstrates basic process spawning, message passing, and receiving.
+  """
+  @doc """
+  Spawns a process that waits for a message and replies.
+  """
+  def run_ping_pong do
+    parent = self()
+
+    # Spawn a new process
+    pong_pid = spawn(fn ->
+      # The new process waits for a message
+      receive do
+        {:ping, from_pid} ->
+          send(from_pid, {:pong, "Message received!"})
+        _ ->
+          send(parent, {:error, "Unexpected message"})
+      end
+    end)
+
+    # The current process sends a message to the new one
+    send(pong_pid, {:ping, self()})
+
+    # Wait for the reply, with a timeout
+    receive do
+      {:pong, message} -> IO.puts("Ping-Pong success: #{message}")
+    after
+      1000 -> IO.puts("Ping-Pong timeout!")
+    end
+  end
+end
+
+
+defmodule Concurrency.StatefulServer do
+  @moduledoc """
+  A GenServer implementation of a simple key-value store.
+  """
+  use GenServer
+
+  # --- Client API ---
+
+  @doc "Starts the key-value store GenServer."
+  def start_link(initial_state \\ %{}) do
+    GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
+  end
+
+  @doc "Stores a value for a given key."
+  def put(key, value) do
+    # `cast` is asynchronous, no reply is expected.
+    GenServer.cast(__MODULE__, {:put, key, value})
+  end
+
+  @doc "Retrieves a value for a given key."
+  def get(key) do
+    # `call` is synchronous and waits for a reply.
+    GenServer.call(__MODULE__, {:get, key})
+  end
+
+  @doc "Stops the server gracefully."
+  def stop do
+    GenServer.stop(__MODULE__)
+  end
+
+  # --- Server Callbacks ---
+
+  @impl true
+  def init(initial_state) do
+    # Initializes the server's state
+    IO.puts("StatefulServer initializing...")
+    {:ok, initial_state}
+  end
+
+  @impl true
+  def handle_call({:get, key}, _from, state) do
+    value = Map.get(state, key)
+    {:reply, value, state}
+  end
+
+  @impl true
+  def handle_cast({:put, key, value}, state) do
+    new_state = Map.put(state, key, value)
+    {:noreply, new_state}
+  end
+
+  # Catch-all for unknown messages
+  @impl true
+  def handle_info({:unknown_message, data}, state) do
+    IO.puts("Received unknown info message: #{inspect(data)}")
+    {:noreply, state}
+  end
+
+  @impl true
+  def terminate(reason, _state) do
+    IO.puts("StatefulServer terminating. Reason: #{inspect(reason)}")
+    :ok
+  end
+end
+
+defmodule Concurrency.SimpleAgent do
+  @moduledoc """
+  Uses an Agent for simple, atomic state management (a counter).
+  """
+  def start_link(initial_value \\ 0) do
+    Agent.start_link(fn -> initial_value end, name: __MODULE__)
+  end
+
+  def increment do
+    Agent.update(__MODULE__, &(&1 + 1))
+  end
+
+  def get do
+    Agent.get(__MODULE__, &(&1))
+  end
+end
+
+
+defmodule Concurrency.AsyncTasks do
+  @moduledoc """
+  Demonstrates running tasks asynchronously with the Task module.
+  """
+  @doc """
+  Simulates fetching data from multiple sources concurrently.
+  """
+  def fetch_all_data do
+    # Start tasks that run in parallel
+    task1 = Task.async(fn -> fetch_from_source("API A", 500) end)
+    task2 = Task.async(fn -> fetch_from_source("API B", 1000) end)
+    task3 = Task.async(fn -> fetch_from_source("API C", 750) end)
+
+    # Await the results
+    results = Task.await_many([task1, task2, task3], 5000)
+    IO.inspect(results, label: "Async Task Results")
+    results
+  end
+
+  defp fetch_from_source(name, delay_ms) do
+    :timer.sleep(delay_ms)
+    {:ok, "Data from #{name}"}
+  end
+end
+
+
+defmodule MyWebApp.Supervisor do
+  @moduledoc """
+  A simple supervisor to manage our application's processes.
+  """
+  use Supervisor
+
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  end
+
+  @impl true
+  def init(:ok) do
+    # Define the children to be supervised
+    children = [
+      # The StatefulServer GenServer
+      {Concurrency.StatefulServer, %{initial_data: "is_here"}},
+      # The SimpleAgent
+      {Concurrency.SimpleAgent, 100}
+    ]
+
+    # Define the supervision strategy
+    # :one_for_one -> if a child dies, only it is restarted.
+    opts = [strategy: :one_for_one, name: MyWebApp.Supervisor]
+    Supervisor.init(children, opts)
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 5: Metaprogramming (Macros and Sigils)
+# -----------------------------------------------------------------------------
+
+defmodule Meta.Macros do
+  @moduledoc """
+  An example of a simple macro for debugging.
+  """
+  defmacro log_and_execute(expression) do
+    # quote returns the Abstract Syntax Tree (AST) of the code
+    quote do
+      # unquote injects a value into the AST
+      result = unquote(expression)
+      IO.puts("Expression `#{Macro.to_string(unquote(expression))}` evaluated to: #{inspect(result)}")
+      result
+    end
+  end
+
+  defmacro unless(condition, clauses) do
+    # Re-implementing the `unless` macro for demonstration
+    do_clause = Keyword.get(clauses, :do)
+    else_clause = Keyword.get(clauses, :else, nil)
+
+    quote do
+      case unquote(condition) do
+        # If condition is falsy (nil or false), execute `do`
+        x when x in [false, nil] -> unquote(do_clause)
+        # Otherwise, execute `else` or return nil
+        _ -> unquote(else_clause)
+      end
+    end
+  end
+end
+
+defmodule Meta.CustomSigil do
+  @moduledoc """
+  Implements a custom sigil `~I` to parse a string of integers.
+  """
+  @doc """
+  Parses a space-separated string of integers into a list of integers.
+
+  ## Examples
+
+      iex> import Meta.CustomSigil
+      iex> ~I(10 25 -5 100)
+      [10, 25, -5, 100]
+  """
+  def sigil_I(string, _modifiers) do
+    string
+    |> String.split(" ", trim: true)
+    |> Enum.map(&String.to_integer/1)
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 6: Behaviours and Protocols (Polymorphism)
+# -----------------------------------------------------------------------------
+
+defmodule Polymorphism.ToJson do
+  @moduledoc """
+  A behaviour (like an interface) that specifies a contract for converting
+  a data structure to a JSON-like map.
+  """
+  @callback to_json(struct()) :: map()
+end
+
+defmodule Polymorphism.User do
+  @moduledoc "A user struct that implements the ToJson behaviour."
+  @behaviour Polymorphism.ToJson
+
+  defstruct [:id, :name, :password_hash]
+
+  @impl Polymorphism.ToJson
+  def to_json(%__MODULE__{id: id, name: name}) do
+    # Don't include sensitive fields like password_hash
+    %{id: id, name: name, type: "user"}
+  end
+end
+
+defmodule Polymorphism.Product do
+  @moduledoc "A product struct that also implements ToJson."
+  @behaviour Polymorphism.ToJson
+
+  defstruct [:sku, :name, :price, :internal_cost]
+
+  @impl Polymorphism.ToJson
+  def to_json(product) do
+    %{
+      sku: product.sku,
+      name: product.name,
+      price: product.price
+    }
+  end
+end
+
+defmodule Polymorphism.Inspectable do
+  @moduledoc """
+  A protocol for providing a human-readable summary of a data structure.
+  Protocols allow dispatching to a specific implementation based on the
+  data type of the first argument.
+  """
+  @doc "Returns a string summary of the data."
+  defprotocol summary do
+    @fallback_to_any true
+    def summarize(data)
+  end
+
+  # Implementation for Lists
+  defimpl summary, for: List do
+    def summarize(list) do
+      "A list with #{length(list)} items."
+    end
+  end
+
+  # Implementation for Maps
+  defimpl summary, for: Map do
+    def summarize(map) do
+      keys = Map.keys(map) |> Enum.map(&to_string/1) |> Enum.join(", ")
+      "A map with keys: #{keys}."
+    end
+  end
+
+  # Implementation for our own User struct
+  defimpl summary, for: Polymorphism.User do
+    def summarize(user) do
+      "User(id: #{user.id}, name: \"#{user.name}\")"
+    end
+  end
+
+  # Fallback implementation for any other data type
+  defimpl summary, for: Any do
+    def summarize(data) do
+      "Some data of type #{inspect(data.__struct__ || :unknown)}"
+    end
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 7: Advanced Topics (Error Handling, Binaries, Files)
+# -----------------------------------------------------------------------------
+
+defmodule Advanced.ErrorHandling do
+  @moduledoc """
+  Demonstrates `try/rescue` for exceptions and `try/catch` for throws.
+  """
+  def custom_division(a, b) do
+    try do
+      if b == 0 do
+        # Raising an exception
+        raise ArithmeticError, message: "division by zero"
+      else
+        a / b
+      end
+    rescue
+      # Catching a specific exception
+      e in ArithmeticError -> {:error, e.message}
+    catch
+      # This block is for catching `throw` values, not exceptions
+      :some_thrown_value -> {:error, "A value was thrown"}
+    after
+      # This block always executes
+      IO.puts("Division attempt finished.")
+    end
+  end
+
+  def throw_and_catch_example do
+    try do
+      # `throw` is used for non-local returns, not for errors.
+      throw(:i_am_done)
+    catch
+      :i_am_done -> "Caught the thrown value!"
+    end
+  end
+end
+
+
+defmodule Advanced.FileSystem do
+  @moduledoc "Working with the file system."
+  def file_io_example(path, content) do
+    # Write to a file
+    case File.write(path, content) do
+      :ok ->
+        IO.puts("Successfully wrote to #{path}")
+
+        # Read from the file
+        case File.read(path) do
+          {:ok, binary} ->
+            IO.puts("Read content: #{binary}")
+            # Clean up
+            File.rm(path)
+            {:ok, :complete}
+          {:error, reason} ->
+            IO.puts("Error reading file: #{reason}")
+            {:error, reason}
+        end
+      {:error, reason} ->
+        IO.puts("Error writing file: #{reason}")
+        {:error, reason}
+    end
+  end
+end
+
+defmodule Advanced.BinaryParsing do
+  @moduledoc "Using binary pattern matching to parse data."
+
+  # Imagine a simple network packet:
+  # 1 byte: version (e.g., 1)
+  # 2 bytes: length (unsigned big-endian integer)
+  # 4 bytes: message_type (e.g., "PING")
+  # N bytes: payload (the rest of the binary)
+  @spec parse_packet(binary()) :: {:ok, map()} | {:error, :invalid_packet}
+  def parse_packet(<<1::size(8), length::unsigned-big-integer-size(16), "PING", payload::binary>>) do
+    # This clause specifically matches a version 1 PING packet
+    if byte_size(payload) == length do
+      {:ok, %{version: 1, type: "PING", payload: payload}}
+    else
+      {:error, :length_mismatch}
+    end
+  end
+
+  def parse_packet(<<version::8, length::16, type::binary-size(4), payload::binary>>) do
+    # A more generic clause
+    {:ok, %{version: version, length: length, type: type, payload: payload}}
+  end
+
+  def parse_packet(_), do: {:error, :invalid_packet}
+
+
+  @doc "Constructs a binary packet."
+  @spec build_packet(integer, String.t, String.t) :: binary
+  def build_packet(version, type, payload) do
+    payload_size = byte_size(payload)
+    <<version::8, payload_size::16, type::binary-size(4), payload::binary>>
+  end
+end
+
+# -----------------------------------------------------------------------------
+# Section 8: Unsafe Code (Interacting with Erlang)
+# -----------------------------------------------------------------------------
+
+defmodule Unsafe.ErlangInterop do
+  @moduledoc """
+  Demonstrates calling Erlang modules directly. This can be "unsafe" if
+  the Erlang code has side effects or uses atoms in ways that could
+  exhaust the atom table.
+  """
+  def get_system_info do
+    # Get OS environment variables
+    path = :os.getenv('PATH')
+    # Get Erlang VM statistics
+    stats = :erlang.memory()
+
+    %{
+      path_variable_length: byte_size(path),
+      vm_memory: stats
+    }
+  end
+
+  @doc "Uses :ets, Erlang's in-memory term storage. Unsafe as it's mutable state outside OTP."
+  def ets_example do
+    # Create a new ETS table
+    table_id = :ets.new(:my_temp_table, [:set, :public, :named_table])
+    # Insert some data
+    :ets.insert(table_id, {:user, 1, "Alice"})
+    :ets.insert(table_id, {:user, 2, "Bob"})
+
+    # Lookup data
+    result = :ets.lookup(table_id, :user)
+
+    # Clean up
+    :ets.delete(table_id)
+
+    result
+  end
+end
+
+
+# -----------------------------------------------------------------------------
+# Section 9: Main Application Logic
+# -----------------------------------------------------------------------------
+
+defmodule Application do
+  @moduledoc """
+  The main entry point to run and demonstrate all the defined modules.
+  """
+  import Meta.Macros
+  import Meta.CustomSigil
+
+  def run do
+    IO.puts("\n--- Section 1: Core Basics ---")
+    IO.puts(Core.Basics.greet("World"))
+    IO.inspect(Core.Basics.area({:circle, 10}), label: "Area of circle")
+    IO.inspect(Core.Basics.area({:rectangle, 4, 5}), label: "Area of rectangle")
+    IO.inspect(Core.Basics.sum_list([10, 20, 30, -5]), label: "Sum of list")
+    IO.inspect(Core.Basics.process_data(%{user_id: 1}), label: "Process Data (Success)")
+    IO.inspect(Core.Basics.process_data(%{user_id: 99}), label: "Process Data (Fail)")
+
+    IO.puts("\n--- Section 2: Data Structures ---")
+    Core.DataStructures.create_and_update_user()
+    Core.DataStructures.work_with_maps()
+    Core.DataStructures.work_with_lists()
+    Core.DataStructures.use_comprehensions()
+
+    IO.puts("\n--- Section 3: Enum and Stream ---")
+    numbers = 1..100_000
+    IO.inspect(DataProcessing.Pipeline.eager_processing(Enum.to_list(numbers)), label: "Eager processing result")
+    IO.inspect(DataProcessing.Pipeline.lazy_processing(numbers), label: "Lazy processing result")
+    DataProcessing.Pipeline.other_enum_examples()
+
+    IO.puts("\n--- Section 4: Concurrency and OTP ---")
+    Concurrency.SimpleProcess.run_ping_pong()
+
+    # Start the supervisor, which starts the GenServer and Agent
+    {:ok, _sup_pid} = MyWebApp.Supervisor.start_link([])
+
+    # Interact with the GenServer
+    Concurrency.StatefulServer.put(:name, "Elixir")
+    Concurrency.StatefulServer.put(:version, "1.15")
+    val = Concurrency.StatefulServer.get(:name)
+    IO.puts("Got value from GenServer: #{val}")
+
+    # Interact with the Agent
+    Concurrency.SimpleAgent.increment()
+    Concurrency.SimpleAgent.increment()
+    counter_val = Concurrency.SimpleAgent.get()
+    IO.puts("Agent counter value: #{counter_val}")
+
+    # Run async tasks
+    Concurrency.AsyncTasks.fetch_all_data()
+
+    # Stop the GenServer
+    Concurrency.StatefulServer.stop()
+
+    IO.puts("\n--- Section 5: Metaprogramming ---")
+    x = 10
+    y = 20
+    # Using our custom macro
+    log_and_execute(x + y * 2)
+
+    # Using our re-implemented unless
+    unless(x > 100, do: IO.puts("This should print"), else: IO.puts("This should not"))
+
+    # Using our custom sigil
+    my_integers = ~I(10 20 -30 40 55)
+    IO.inspect(my_integers, label: "Integers from sigil ~I")
+
+    IO.puts("\n--- Section 6: Polymorphism ---")
+    user = %Polymorphism.User{id: 123, name: "Frank", password_hash: "secret"}
+    product = %Polymorphism.Product{sku: "E-123", name: "Gizmo", price: 99.99}
+
+    # Using the ToJson behaviour
+    IO.inspect(Polymorphism.ToJson.to_json(user), label: "User as JSON")
+    IO.inspect(Polymorphism.ToJson.to_json(product), label: "Product as JSON")
+
+    # Using the summary protocol
+    alias Polymorphism.Inspectable.summary
+    IO.puts(summary.summarize([1, 2, 3]))
+    IO.puts(summary.summarize(%{a: 1, b: 2}))
+    IO.puts(summary.summarize(user))
+    IO.puts(summary.summarize(product))
+
+    IO.puts("\n--- Section 7: Advanced Topics ---")
+    IO.inspect(Advanced.ErrorHandling.custom_division(10, 2), label: "Division Success")
+    IO.inspect(Advanced.ErrorHandling.custom_division(10, 0), label: "Division by Zero")
+    IO.puts(Advanced.ErrorHandling.throw_and_catch_example())
+    Advanced.FileSystem.file_io_example("temp.txt", "This is a test file.")
+
+    ping_packet = Advanced.BinaryParsing.build_packet(1, "PING", "hello")
+    IO.inspect(ping_packet, label: "Constructed binary packet")
+    IO.inspect(Advanced.BinaryParsing.parse_packet(ping_packet), label: "Parsed PING packet")
+    other_packet = <<2, 0, 10, "DATA", "some data."::binary>>
+    IO.inspect(Advanced.BinaryParsing.parse_packet(other_packet), label: "Parsed other packet")
+
+    IO.puts("\n--- Section 8: Unsafe Erlang Interop ---")
+    IO.inspect(Unsafe.ErlangInterop.get_system_info(), label: "System Info")
+    IO.inspect(Unsafe.ErlangInterop.ets_example(), label: "ETS Lookup Result")
+
+    IO.puts("\n--- Demonstration Complete ---")
+  end
+end
+
+# To run this file, save it as `comprehensive_elixir_example.ex`
+# and execute `elixir comprehensive_elixir_example.ex` in your terminal.
+Application.run()

@@ -1,0 +1,942 @@
+// =====================================================================================
+// MEGA JAVA EXAMPLE FOR LLM TRAINING DATASET
+// Total Lines: ~1000
+// Author: AI Assistant
+// Description: This file contains a wide variety of Java code constructs, simulating
+// a small e-commerce application. It is designed to be a comprehensive sample
+// for training language models on the Java programming language.
+//
+// Features demonstrated include:
+// - Core OOP: Classes, Objects, Inheritance, Polymorphism, Abstraction, Encapsulation
+// - Modern Java: Records, Sealed Classes, Lambdas, Streams, Var
+// - Data Structures: List, Map, Set, Queue
+// - Generics: Generic classes, methods, and wildcards
+// - Exception Handling: Custom exceptions, try-catch-finally
+// - Concurrency: Threads, ExecutorService, Futures, synchronized, volatile, Atomics
+// - File I/O: Classic I/O, NIO (New I/O), Serialization
+// - Networking: Simple TCP client/server
+// - Database: JDBC with H2 in-memory database
+// - Metaprogramming: Reflection API and Custom Annotations
+// - Unsafe Code: A demonstration of sun.misc.Unsafe for direct memory access
+// =====================================================================================
+
+import java.io.*;
+import java.lang.annotation.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.sql.*;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+// Using a single outer class to contain the entire project structure
+// for easy inclusion in a single file.
+public class MegaJavaExample {
+
+    // =====================================================================================
+    // Entry Point: Main Class
+    // Simulates: com.example.ecommerce.Main
+    // =====================================================================================
+    public static void main(String[] args) {
+        System.out.println("--- Starting Mega Java E-Commerce Simulation ---");
+
+        // 1. Setup Services
+        var inventoryService = new InventoryService();
+        var orderService = new OrderService(inventoryService);
+        var notificationService = new NotificationService();
+        orderService.addObserver(notificationService);
+
+        // 2. Populate Inventory
+        populateInventory(inventoryService);
+        inventoryService.printInventory();
+
+        // 3. Create Customers
+        var alice = new model.Customer(1, "Alice", "alice@example.com", model.Customer.MembershipTier.GOLD);
+        var bob = new model.Customer(2, "Bob", "bob@example.com", model.Customer.MembershipTier.SILVER);
+        System.out.println("\nCreated customers: " + alice + ", " + bob);
+
+        // 4. Simulate Shopping and Ordering
+        try {
+            var cart = new HashMap<Integer, Integer>();
+            cart.put(101, 1); // 1x The Pragmatic Programmer
+            cart.put(202, 1); // 1x Wireless Mouse
+            var order = orderService.createOrder(alice, cart);
+            System.out.println("\nCreated Order: " + order.getOrderId());
+            orderService.processOrder(order.getOrderId(), new service.CreditCardPayment("1234-5678-9012-3456"));
+
+        } catch (exception.ProductNotFoundException | exception.InsufficientStockException e) {
+            System.err.println("Order failed: " + e.getMessage());
+        }
+
+        // 5. Demonstrate Java Streams API
+        demonstrateStreams(inventoryService);
+
+        // 6. Demonstrate Concurrency
+        demonstrateConcurrency(notificationService);
+        
+        // 7. Demonstrate I/O and NIO
+        demonstrateIO();
+
+        // 8. Demonstrate JDBC
+        demonstrateJDBC();
+
+        // 9. Demonstrate Reflection and Annotations
+        demonstrateReflection(inventoryService.findProductById(201).orElse(null));
+
+        // 10. Demonstrate Networking
+        demonstrateNetworking();
+
+        // 11. Demonstrate Unsafe Code (Use with extreme caution)
+        demonstrateUnsafe();
+
+        System.out.println("\n--- Mega Java E-Commerce Simulation Finished ---");
+    }
+
+    private static void populateInventory(InventoryService inventory) {
+        inventory.addProduct(new model.Book(101, "The Pragmatic Programmer", new BigDecimal("45.50"), 10, "978-0135957059", "David Thomas"));
+        inventory.addProduct(new model.Book(102, "Clean Code", new BigDecimal("38.99"), 5, "978-0132350884", "Robert C. Martin"));
+        inventory.addProduct(new model.Electronics(201, "Laptop Pro", new BigDecimal("1299.99"), 15, "TechCorp", 24));
+        inventory.addProduct(new model.Electronics(202, "Wireless Mouse", new BigDecimal("25.00"), 50, "Clicker", 12));
+    }
+
+    private static void demonstrateStreams(InventoryService inventory) {
+        System.out.println("\n--- Demonstrating Streams API ---");
+        // Find all books and get their titles
+        List<String> bookTitles = inventory.getAllProducts().stream()
+                .filter(p -> p instanceof model.Book)
+                .map(model.Product::getName)
+                .collect(Collectors.toList());
+        System.out.println("Book titles: " + bookTitles);
+
+        // Calculate total value of all electronics in stock
+        BigDecimal totalElectronicsValue = inventory.getAllProducts().stream()
+                .filter(p -> p.getCategory() == model.Category.ELECTRONICS)
+                .map(p -> p.getPrice().multiply(BigDecimal.valueOf(p.getStock())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        System.out.println("Total value of electronics: $" + totalElectronicsValue);
+
+        // Group products by category
+        Map<model.Category, List<model.Product>> productsByCategory = inventory.getAllProducts().stream()
+                .collect(Collectors.groupingBy(model.Product::getCategory));
+        System.out.println("Products grouped by category: " + productsByCategory.keySet());
+    }
+    
+    private static void demonstrateConcurrency(NotificationService notificationService) {
+        System.out.println("\n--- Demonstrating Concurrency ---");
+        System.out.println("Shutting down notification service...");
+        notificationService.shutdown();
+        System.out.println("All pending notifications should have been sent.");
+
+        // Demonstrate a CountDownLatch
+        int workerCount = 5;
+        CountDownLatch latch = new CountDownLatch(workerCount);
+        ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+        System.out.println("Starting 5 worker threads that will count down the latch.");
+        for (int i = 0; i < workerCount; i++) {
+            final int workerId = i;
+            executor.submit(() -> {
+                try {
+                    System.out.println("Worker " + workerId + " starting work.");
+                    Thread.sleep(100 + (long)(Math.random() * 400));
+                    System.out.println("Worker " + workerId + " finished.");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        try {
+            latch.await(2, TimeUnit.SECONDS); // Wait for all workers to finish
+            System.out.println("All workers have finished. Main thread proceeding.");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private static void demonstrateIO() {
+        System.out.println("\n--- Demonstrating I/O & NIO ---");
+        // Serialization
+        model.Book bookToSerialize = new model.Book(999, "Serializable Book", BigDecimal.TEN, 1, "123", "Author");
+        String filename = "book.ser";
+        util.SerializationUtil.serialize(bookToSerialize, filename);
+        model.Book deserializedBook = util.SerializationUtil.deserialize(filename);
+        System.out.println("Serialized and Deserialized Book: " + deserializedBook.getName());
+        
+        // NIO File Operations
+        String nioFilename = "nio-test.txt";
+        try {
+            util.FileUtils.writeToFile(nioFilename, "Hello from NIO!\nThis is a test.");
+            String content = util.FileUtils.readFromFile(nioFilename);
+            System.out.println("Read from NIO file: " + content.replace("\n", " "));
+            Files.deleteIfExists(Paths.get(nioFilename));
+            Files.deleteIfExists(Paths.get(filename));
+        } catch (IOException e) {
+            System.err.println("NIO demo failed: " + e.getMessage());
+        }
+    }
+
+    private static void demonstrateJDBC() {
+        System.out.println("\n--- Demonstrating JDBC ---");
+        repository.DatabaseManager.initDatabase();
+        repository.DatabaseManager.insertSampleData();
+        repository.DatabaseManager.queryData();
+    }
+
+    private static void demonstrateReflection(model.Product product) {
+        if (product == null) return;
+        System.out.println("\n--- Demonstrating Reflection & Annotations ---");
+        util.ReflectionUtil.inspectObject(product);
+        util.ReflectionUtil.invokeDiscountMethod(product);
+        System.out.println("Price after reflection invocation: " + product.getPrice());
+    }
+
+    private static void demonstrateNetworking() {
+        System.out.println("\n--- Demonstrating Networking ---");
+        // Run server in a new thread so main can continue
+        Thread serverThread = new Thread(network.SimpleEchoServer::startServer);
+        serverThread.setDaemon(true); // Allow program to exit even if server thread is running
+        serverThread.start();
+        
+        try {
+            Thread.sleep(500); // Give server time to start
+            network.SimpleEchoClient.startClient();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static void demonstrateUnsafe() {
+        System.out.println("\n--- Demonstrating sun.misc.Unsafe (Advanced/Dangerous) ---");
+        try {
+            long address = util.UnsafeUtil.allocateMemory(16);
+            System.out.println("Allocated 16 bytes of off-heap memory at address: " + address);
+            util.UnsafeUtil.getUnsafe().putLong(address, 123456789012345L);
+            util.UnsafeUtil.getUnsafe().putLong(address + 8, 987654321098765L);
+            
+            long value1 = util.UnsafeUtil.getUnsafe().getLong(address);
+            long value2 = util.UnsafeUtil.getUnsafe().getLong(address + 8);
+            System.out.println("Read from off-heap memory: " + value1 + ", " + value2);
+
+            util.UnsafeUtil.freeMemory(address);
+            System.out.println("Freed off-heap memory.");
+        } catch (Exception e) {
+            System.err.println("Unsafe operations failed. This is expected if the JVM restricts access.");
+            System.err.println("Reason: " + e.getMessage());
+        }
+    }
+
+
+    // =====================================================================================
+    // Model Package
+    // Simulates: com.example.ecommerce.model.*
+    // =====================================================================================
+    static class model {
+
+        /**
+         * Represents the category of a product.
+         * Enums are type-safe and provide a fixed set of constants.
+         */
+        public enum Category {
+            BOOKS,
+            ELECTRONICS,
+            CLOTHING,
+            HOME_GOODS
+        }
+        
+        /**
+         * Represents a customer's membership tier.
+         * Enums can have fields and methods.
+         */
+        public enum MembershipTier {
+            BRONZE(0.0),
+            SILVER(0.05),
+            GOLD(0.10);
+
+            private final double discountRate;
+
+            MembershipTier(double discountRate) {
+                this.discountRate = discountRate;
+            }
+
+            public double getDiscountRate() {
+                return discountRate;
+            }
+        }
+
+        /**
+         * Using a Java 16+ Record for an immutable data carrier class.
+         * Automatically generates constructor, getters, equals(), hashCode(), and toString().
+         */
+        public record Customer(int id, String name, String email, MembershipTier tier) {}
+
+        /**
+         * Sealed interface to restrict which classes can implement it.
+         * Only Product and Service classes (if they existed) could be Sellable.
+         */
+        public sealed interface Sellable permits Product {
+            BigDecimal getPrice();
+            String getName();
+        }
+
+        /**
+         * An abstract base class for all products.
+         * Demonstrates abstraction, encapsulation, and inheritance.
+         */
+        public static abstract class Product implements Sellable, Serializable {
+            // private static final long serialVersionUID needed for stable serialization
+            private static final long serialVersionUID = 1L;
+
+            // Fields are private to enforce encapsulation
+            private final int id;
+            private String name;
+            private BigDecimal price;
+            // 'volatile' ensures visibility of changes across threads
+            private volatile int stock;
+            private final Category category;
+
+            public Product(int id, String name, BigDecimal price, int stock, Category category) {
+                this.id = id;
+                this.name = name;
+                this.price = price;
+                this.stock = stock;
+                this.category = category;
+            }
+            
+            // Abstract method must be implemented by subclasses
+            public abstract String getDescription();
+
+            @annotation.Loggable
+            public void applyDiscount(double percentage) {
+                if (percentage > 0 && percentage < 1) {
+                    BigDecimal discountFactor = BigDecimal.ONE.subtract(BigDecimal.valueOf(percentage));
+                    this.price = this.price.multiply(discountFactor);
+                }
+            }
+
+            // Getters and Setters (Accessors and Mutators)
+            public int getId() { return id; }
+            @Override public String getName() { return name; }
+            public void setName(String name) { this.name = name; }
+            @Override public BigDecimal getPrice() { return price; }
+            public void setPrice(BigDecimal price) { this.price = price; }
+            public int getStock() { return stock; }
+            public Category getCategory() { return category; }
+
+            // synchronized method to ensure thread-safe stock updates
+            public synchronized void adjustStock(int quantity) throws exception.InsufficientStockException {
+                if (this.stock + quantity < 0) {
+                    throw new exception.InsufficientStockException("Not enough stock for " + name);
+                }
+                this.stock += quantity;
+            }
+
+            @Override
+            public String toString() {
+                return String.format("Product[id=%d, name='%s', price=%.2f, stock=%d, category=%s]",
+                        id, name, price, stock, category);
+            }
+        }
+
+        /**
+         * A concrete subclass of Product.
+         * Demonstrates inheritance and method overriding.
+         */
+        public static final class Book extends Product { // final class cannot be extended
+            private static final long serialVersionUID = 2L;
+            private final String isbn;
+            private final String author;
+
+            public Book(int id, String name, BigDecimal price, int stock, String isbn, String author) {
+                super(id, name, price, stock, Category.BOOKS);
+                this.isbn = isbn;
+                this.author = author;
+            }
+
+            @Override
+            public String getDescription() {
+                return String.format("'%s' by %s (ISBN: %s)", getName(), author, isbn);
+            }
+
+            public String getIsbn() { return isbn; }
+            public String getAuthor() { return author; }
+        }
+
+        /**
+         * Another concrete subclass of Product.
+         */
+        public static final class Electronics extends Product {
+            private static final long serialVersionUID = 3L;
+            private final String brand;
+            private final int warrantyMonths;
+
+            public Electronics(int id, String name, BigDecimal price, int stock, String brand, int warrantyMonths) {
+                super(id, name, price, stock, Category.ELECTRONICS);
+                this.brand = brand;
+                this.warrantyMonths = warrantyMonths;
+            }
+
+            @Override
+            public String getDescription() {
+                return String.format("%s by %s, with %d months warranty.", getName(), brand, warrantyMonths);
+            }
+            
+            public String getBrand() { return brand; }
+            public int getWarrantyMonths() { return warrantyMonths; }
+        }
+        
+        /**
+         * Order class demonstrating composition.
+         */
+        public static class Order {
+            private final String orderId;
+            private final Customer customer;
+            private final List<OrderItem> items;
+            private final LocalDateTime orderDate;
+            private OrderStatus status;
+
+            public Order(Customer customer, List<OrderItem> items) {
+                this.orderId = UUID.randomUUID().toString();
+                this.customer = customer;
+                this.items = new ArrayList<>(items);
+                this.orderDate = LocalDateTime.now();
+                this.status = OrderStatus.PENDING;
+            }
+            
+            public BigDecimal getTotalPrice() {
+                return items.stream()
+                        .map(OrderItem::getTotalPrice)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+            
+            public String getOrderId() { return orderId; }
+            public Customer getCustomer() { return customer; }
+            public List<OrderItem> getItems() { return Collections.unmodifiableList(items); }
+            public OrderStatus getStatus() { return status; }
+            public void setStatus(OrderStatus status) { this.status = status; }
+
+            public enum OrderStatus { PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED }
+        }
+
+        /**
+         * OrderItem class, part of the Order composition.
+         */
+        public static class OrderItem {
+            private final Product product;
+            private final int quantity;
+
+            public OrderItem(Product product, int quantity) {
+                this.product = product;
+                this.quantity = quantity;
+            }
+
+            public BigDecimal getTotalPrice() {
+                return product.getPrice().multiply(BigDecimal.valueOf(quantity));
+            }
+
+            public Product getProduct() { return product; }
+            public int getQuantity() { return quantity; }
+        }
+    }
+
+
+    // =====================================================================================
+    // Service Package
+    // Simulates: com.example.ecommerce.service.*
+    // =====================================================================================
+    static class service {
+
+        /**
+         * Manages the inventory of products.
+         * Demonstrates use of Maps and Optional.
+         */
+        public static class InventoryService {
+            private final Map<Integer, model.Product> productMap = new ConcurrentHashMap<>();
+
+            public void addProduct(model.Product product) {
+                productMap.put(product.getId(), product);
+            }
+
+            public Optional<model.Product> findProductById(int id) {
+                return Optional.ofNullable(productMap.get(id));
+            }
+
+
+            public List<model.Product> getAllProducts() {
+                return new ArrayList<>(productMap.values());
+            }
+
+            public void printInventory() {
+                System.out.println("\n--- Current Inventory ---");
+                productMap.values().forEach(System.out::println);
+                System.out.println("-------------------------");
+            }
+        }
+
+        /**
+         * Manages order creation and processing.
+         * Demonstrates Observer pattern, functional interfaces, and custom exceptions.
+         */
+        public static class OrderService extends Observable {
+            private final InventoryService inventoryService;
+            private final Map<String, model.Order> orders = new ConcurrentHashMap<>();
+
+            public OrderService(InventoryService inventoryService) {
+                this.inventoryService = inventoryService;
+            }
+
+            public model.Order createOrder(model.Customer customer, Map<Integer, Integer> productQuantities) 
+                    throws exception.ProductNotFoundException, exception.InsufficientStockException {
+                
+                List<model.OrderItem> items = new ArrayList<>();
+                for (Map.Entry<Integer, Integer> entry : productQuantities.entrySet()) {
+                    int productId = entry.getKey();
+                    int quantity = entry.getValue();
+
+                    model.Product product = inventoryService.findProductById(productId)
+                            .orElseThrow(() -> new exception.ProductNotFoundException("Product with ID " + productId + " not found."));
+
+                    if (product.getStock() < quantity) {
+                        throw new exception.InsufficientStockException("Not enough stock for " + product.getName());
+                    }
+                    items.add(new model.OrderItem(product, quantity));
+                }
+
+                // Decrease stock for all items
+                for (model.OrderItem item : items) {
+                    item.getProduct().adjustStock(-item.getQuantity());
+                }
+
+                var order = new model.Order(customer, items);
+                orders.put(order.getOrderId(), order);
+
+                // Notify observers (e.g., NotificationService)
+                setChanged();
+                notifyObservers(order);
+
+                return order;
+            }
+            
+            public void processOrder(String orderId, PaymentService paymentService) {
+                model.Order order = orders.get(orderId);
+                if (order != null && order.getStatus() == model.Order.OrderStatus.PENDING) {
+                    BigDecimal amount = order.getTotalPrice();
+                    if (paymentService.processPayment(amount)) {
+                        order.setStatus(model.Order.OrderStatus.PROCESSING);
+                        System.out.println("Order " + orderId + " processed successfully.");
+                    } else {
+                        System.err.println("Payment failed for order " + orderId);
+                        // Here you might want to rollback stock changes
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Demonstrates a generic utility for processing data.
+         * @param <T> Input type
+         * @param <R> Output type
+         */
+        public static class GenericProcessor<T, R> {
+            private final Function<T, R> processingLogic;
+
+            public GenericProcessor(Function<T, R> processingLogic) {
+                this.processingLogic = processingLogic;
+            }
+
+            public R process(T input) {
+                System.out.println("Processing input of type " + input.getClass().getSimpleName());
+                return processingLogic.apply(input);
+            }
+        }
+
+        /**
+         * A service using an ExecutorService to send notifications asynchronously.
+         * Demonstrates Observer pattern and concurrency.
+         */
+        public static class NotificationService implements Observer {
+            private final ExecutorService emailExecutor = Executors.newFixedThreadPool(3);
+            private final AtomicInteger emailCount = new AtomicInteger(0);
+
+            @Override
+            public void update(Observable o, Object arg) {
+                if (arg instanceof model.Order order) {
+                    sendOrderConfirmationEmail(order);
+                }
+            }
+
+            public void sendOrderConfirmationEmail(model.Order order) {
+                emailExecutor.submit(() -> {
+                    System.out.println("NOTIFICATION THREAD: Preparing to send confirmation for order " + order.getOrderId());
+                    try {
+                        // Simulate network latency
+                        Thread.sleep(1000);
+                        System.out.printf("NOTIFICATION: Email sent to %s for order %s. (Total emails sent: %d)\n",
+                                order.getCustomer().email(), order.getOrderId(), emailCount.incrementAndGet());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            }
+
+            public void shutdown() {
+                emailExecutor.shutdown();
+                try {
+                    if (!emailExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                        emailExecutor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    emailExecutor.shutdownNow();
+                }
+            }
+        }
+        
+        // Interface for payment strategies
+        public interface PaymentService {
+            boolean processPayment(BigDecimal amount);
+        }
+
+        // Concrete implementation for Credit Card payment
+        public static class CreditCardPayment implements PaymentService {
+            private final String cardNumber;
+
+            public CreditCardPayment(String cardNumber) { this.cardNumber = cardNumber; }
+
+            @Override
+            public boolean processPayment(BigDecimal amount) {
+                System.out.printf("Processing $%.2f payment with credit card ending in %s...\n", 
+                    amount, cardNumber.substring(cardNumber.length() - 4));
+                // Simulate payment gateway call
+                return true;
+            }
+        }
+        
+        // Concrete implementation for PayPal payment
+        public static class PayPalPayment implements PaymentService {
+            private final String email;
+            public PayPalPayment(String email) { this.email = email; }
+            @Override
+            public boolean processPayment(BigDecimal amount) {
+                System.out.printf("Processing $%.2f payment with PayPal account %s...\n", amount, email);
+                return true;
+            }
+        }
+    }
+
+
+    // =====================================================================================
+    // Exception Package
+    // Simulates: com.example.ecommerce.exception.*
+    // =====================================================================================
+    static class exception {
+
+        /** Custom checked exception */
+        public static class ProductNotFoundException extends Exception {
+            public ProductNotFoundException(String message) {
+                super(message);
+            }
+        }
+
+        /** Custom unchecked exception */
+        public static class InsufficientStockException extends RuntimeException {
+            public InsufficientStockException(String message) {
+                super(message);
+            }
+        }
+    }
+
+
+    // =====================================================================================
+    // Utility Package
+    // Simulates: com.example.ecommerce.util.*
+    // =====================================================================================
+    static class util {
+
+        /** Utility class for file operations using classic I/O and NIO */
+        public static class FileUtils {
+            // Writing with NIO
+            public static void writeToFile(String filename, String content) throws IOException {
+                Path path = Paths.get(filename);
+                Files.writeString(path, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            }
+
+            // Reading with NIO
+            public static String readFromFile(String filename) throws IOException {
+                Path path = Paths.get(filename);
+                return Files.readString(path, StandardCharsets.UTF_8);
+            }
+
+            // Reading with classic I/O (for variety)
+            public static void legacyReadFile(String filename) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Legacy file read failed: " + e.getMessage());
+                }
+            }
+        }
+
+        /** Utility for object serialization */
+        public static class SerializationUtil {
+            public static <T> void serialize(T obj, String filename) {
+                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filename))) {
+                    oos.writeObject(obj);
+                } catch (IOException e) {
+                    System.err.println("Serialization failed: " + e.getMessage());
+                }
+            }
+
+            @SuppressWarnings("unchecked") // Suppressing warning for the cast
+            public static <T> T deserialize(String filename) {
+                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename))) {
+                    return (T) ois.readObject();
+                } catch (IOException | ClassNotFoundException e) {
+                    System.err.println("Deserialization failed: " + e.getMessage());
+                    return null;
+                }
+            }
+        }
+        
+        /** Utility showcasing the Reflection API */
+        public static class ReflectionUtil {
+            public static void inspectObject(Object obj) {
+                if (obj == null) return;
+                Class<?> clazz = obj.getClass();
+                System.out.println("Inspecting class: " + clazz.getName());
+                
+                System.out.println("Fields:");
+                for (Field field : clazz.getDeclaredFields()) {
+                    field.setAccessible(true); // Allow access to private fields
+                    try {
+                        System.out.printf("  - %s %s = %s\n",
+                                field.getType().getSimpleName(), field.getName(), field.get(obj));
+                    } catch (IllegalAccessException e) {
+                        System.out.printf("  - Could not access field %s\n", field.getName());
+                    }
+                }
+
+                System.out.println("Methods with @Loggable annotation:");
+                for (Method method : clazz.getMethods()) {
+                    if (method.isAnnotationPresent(annotation.Loggable.class)) {
+                        System.out.printf("  - %s\n", method.getName());
+                    }
+                }
+            }
+            
+            public static void invokeDiscountMethod(Object product) {
+                try {
+                    Method discountMethod = product.getClass().getMethod("applyDiscount", double.class);
+                    System.out.println("Invoking 'applyDiscount(0.1)' via reflection...");
+                    discountMethod.invoke(product, 0.1); // Apply 10% discount
+                } catch (Exception e) {
+                    System.err.println("Failed to invoke method via reflection: " + e.getMessage());
+                }
+            }
+        }
+        
+        /**
+         * Utility demonstrating the use of sun.misc.Unsafe.
+         * WARNING: This uses internal, non-portable APIs and can crash the JVM.
+         * This code may not run on modern JDKs without specific command-line flags.
+         */
+        public static class UnsafeUtil {
+            private static final sun.misc.Unsafe UNSAFE;
+
+            static {
+                sun.misc.Unsafe unsafeInstance = null;
+                try {
+                    Field f = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                    f.setAccessible(true);
+                    unsafeInstance = (sun.misc.Unsafe) f.get(null);
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    // This will likely happen on JDK 9+ without special flags
+                    System.err.println("Could not get instance of sun.misc.Unsafe. " + e.getMessage());
+                }
+                UNSAFE = unsafeInstance;
+            }
+
+            public static sun.misc.Unsafe getUnsafe() {
+                if (UNSAFE == null) {
+                    throw new IllegalStateException("sun.misc.Unsafe is not available.");
+                }
+                return UNSAFE;
+            }
+
+            public static long allocateMemory(long bytes) {
+                return getUnsafe().allocateMemory(bytes);
+            }
+
+            public static void freeMemory(long address) {
+                getUnsafe().freeMemory(address);
+            }
+        }
+    }
+
+
+    // =====================================================================================
+    // Annotation Package
+    // Simulates: com.example.ecommerce.annotation.*
+    // =====================================================================================
+    static class annotation {
+        /**
+         * A custom annotation to mark methods that should be logged.
+         * @Retention(RetentionPolicy.RUNTIME) - Make it available at runtime via reflection.
+         * @Target(ElementType.METHOD) - This annotation can only be applied to methods.
+         */
+        @Retention(RetentionPolicy.RUNTIME)
+        @Target(ElementType.METHOD)
+        public @interface Loggable {
+            // We could add parameters here, e.g., String level() default "INFO";
+        }
+    }
+    
+
+    // =====================================================================================
+    // Repository Package
+    // Simulates: com.example.ecommerce.repository.*
+    // =====================================================================================
+    static class repository {
+        /**
+         * Manages database connection and queries using JDBC.
+         * Uses H2 in-memory database so no external setup is required.
+         */
+        public static class DatabaseManager {
+            private static final String DB_URL = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1";
+            private static final String USER = "sa";
+            private static final String PASS = "";
+
+            public static Connection getConnection() throws SQLException {
+                return DriverManager.getConnection(DB_URL, USER, PASS);
+            }
+
+            public static void initDatabase() {
+                String createTableSQL = "CREATE TABLE products (" +
+                        "id INT PRIMARY KEY, " +
+                        "name VARCHAR(255), " +
+                        "price DECIMAL(10, 2), " +
+                        "stock INT" +
+                        ");";
+                try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+                    stmt.execute(createTableSQL);
+                    System.out.println("In-memory database and 'products' table created.");
+                } catch (SQLException e) {
+                    System.err.println("Database init failed: " + e.getMessage());
+                }
+            }
+
+            public static void insertSampleData() {
+                String insertSQL = "INSERT INTO products (id, name, price, stock) VALUES (?, ?, ?, ?)";
+                try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+                    // Batch insert
+                    pstmt.setInt(1, 301);
+                    pstmt.setString(2, "SQL T-Shirt");
+                    pstmt.setBigDecimal(3, new BigDecimal("19.99"));
+                    pstmt.setInt(4, 100);
+                    pstmt.addBatch();
+
+                    pstmt.setInt(1, 302);
+                    pstmt.setString(2, "Java Mug");
+                    pstmt.setBigDecimal(3, new BigDecimal("12.50"));
+                    pstmt.setInt(4, 200);
+                    pstmt.addBatch();
+                    
+                    pstmt.executeBatch();
+                    System.out.println("Inserted sample data into 'products' table.");
+                } catch (SQLException e) {
+                    System.err.println("Data insertion failed: " + e.getMessage());
+                }
+            }
+            
+            public static void queryData() {
+                String querySQL = "SELECT * FROM products WHERE price < ?";
+                try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(querySQL)) {
+                    
+                    pstmt.setBigDecimal(1, new BigDecimal("15.00"));
+                    ResultSet rs = pstmt.executeQuery();
+                    
+                    System.out.println("Querying for products with price < $15.00:");
+                    while (rs.next()) {
+                        System.out.printf("  - ID: %d, Name: %s, Price: %.2f, Stock: %d\n",
+                                rs.getInt("id"),
+                                rs.getString("name"),
+                                rs.getBigDecimal("price"),
+                                rs.getInt("stock"));
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Query failed: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+
+    // =====================================================================================
+    // Network Package
+    // Simulates: com.example.ecommerce.network.*
+    // =====================================================================================
+    static class network {
+        
+        private static final int PORT = 12345;
+        private static final String HOST = "localhost";
+
+        /** A very simple single-threaded TCP echo server. */
+        public static class SimpleEchoServer {
+            public static void startServer() {
+                System.out.println("SERVER: Starting on port " + PORT);
+                try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+                    // Accept one connection and then close
+                    try (Socket clientSocket = serverSocket.accept();
+                         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+                         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream())))
+                    {
+                        System.out.println("SERVER: Client connected from " + clientSocket.getRemoteSocketAddress());
+                        String inputLine = in.readLine();
+                        System.out.println("SERVER: Received from client: " + inputLine);
+                        out.println("Echo: " + inputLine);
+                        System.out.println("SERVER: Echo sent. Closing connection.");
+                    }
+                } catch (IOException e) {
+                    System.err.println("SERVER: Exception caught: " + e.getMessage());
+                } finally {
+                    System.out.println("SERVER: Shutting down.");
+                }
+            }
+        }
+
+        /** A client for the SimpleEchoServer. */
+        public static class SimpleEchoClient {
+            public static void startClient() {
+                System.out.println("CLIENT: Attempting to connect to " + HOST + ":" + PORT);
+                try (Socket echoSocket = new Socket(HOST, PORT);
+                     PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
+                     BufferedReader in = new BufferedReader(new InputStreamReader(echoSocket.getInputStream())))
+                {
+                    System.out.println("CLIENT: Connected. Sending message.");
+                    String message = "Hello from Java Client!";
+                    out.println(message);
+                    String response = in.readLine();
+                    System.out.println("CLIENT: Received from server: " + response);
+                } catch (IOException e) {
+                    System.err.println("CLIENT: Could not connect or communicate with server: " + e.getMessage());
+                } finally {
+                    System.out.println("CLIENT: Connection closed.");
+                }
+            }
+        }
+    }
+}

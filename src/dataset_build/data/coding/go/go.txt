@@ -1,0 +1,1106 @@
+// This Go program is a comprehensive "kitchen sink" example designed to showcase a wide
+// variety of Go language features. The purpose of this file is to serve as a rich
+// dataset for training or analyzing language models on Go code. It includes:
+// - Basic syntax: variables, constants, control flow.
+// - Data structures: structs, slices, maps, arrays.
+// - Functions: including variadic, named returns, and closures.
+// - Interfaces and polymorphism.
+// - Concurrency: goroutines, channels, select, sync package (Mutex, WaitGroup, etc).
+// - Generics (Type Parameters, introduced in Go 1.18).
+// - Error handling: standard error patterns, panic/recover.
+// - Standard Library usage: json, http, templates, io, os, regexp, flag.
+// - Advanced topics: reflection, unsafe pointers, CGo, go:generate directives.
+//
+// The code is not intended to be a single, coherent application, but rather a
+// collection of demonstrations. The main function orchestrates calls to various
+// feature-demonstration functions.
+
+package main
+
+/*
+#include <stdio.h>
+#include <stdlib.h>
+
+void myCFunction(const char* s) {
+    printf("Message from C: %s\n", s);
+}
+*/
+import "C"
+
+import (
+	"bytes"
+	"context"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"math"
+	"math/big"
+	"net/http"
+	"os"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"text/template"
+	"time"
+	"unsafe"
+)
+
+//go:generate echo "This is a go:generate directive example. It runs commands at development time."
+//go:generate go vet .
+
+// SECTION: Constants and Global Variables
+// =================================================================
+
+const (
+	AppName    = "Go Feature Showcase"
+	Version    = "1.0.0"
+	PI         = 3.14159265359
+	StatusOK   = 200
+	MaxRetries = 5
+)
+
+// Iota is used for creating incrementing constants.
+const (
+	LevelDebug   = iota // 0
+	LevelInfo           // 1
+	LevelWarning        // 2
+	LevelError          // 3
+	LevelFatal          // 4
+)
+
+var (
+	// A package-level variable, typically used for state that needs to be shared.
+	globalCounter int64 = 0
+	// A package-level mutex to protect the global counter.
+	globalMutex = &sync.Mutex{}
+	// A global variable configured by a command-line flag.
+	outputPrefix *string
+)
+
+// SECTION: Structs and Type Definitions
+// =================================================================
+
+// User represents a user in a system. It includes struct tags for JSON marshaling.
+type User struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	// A private field, not exported, so it won't be marshaled to JSON by default.
+	passwordHash string
+}
+
+// Profile embeds the User struct, demonstrating composition.
+type Profile struct {
+	User            // Embedded struct
+	Bio      string `json:"bio"`
+	Avatar   string `json:"avatar_url"`
+	Follower int
+}
+
+// Vector represents a 2D vector.
+type Vector struct {
+	X, Y float64
+}
+
+// Method for the Vector struct. Methods are functions with a receiver.
+func (v Vector) Length() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+// A pointer receiver method, which can modify the struct instance.
+func (v *Vector) Scale(factor float64) {
+	v.X *= factor
+	v.Y *= factor
+}
+
+// Custom type definition based on a primitive type.
+type UserID int
+
+// SECTION: Interfaces
+// =================================================================
+
+// Shaper is an interface that defines behavior for geometric shapes.
+// Any type that has a method `Area() float64` implicitly implements this interface.
+type Shaper interface {
+	Area() float64
+	Perimeter() float64
+}
+
+// Stringer is a common interface in Go, used for custom string representations.
+type Stringer interface {
+	String() string
+}
+
+// Rectangle struct implementing the Shaper interface.
+type Rectangle struct {
+	Width, Height float64
+}
+
+func (r Rectangle) Area() float64 {
+	return r.Width * r.Height
+}
+
+func (r Rectangle) Perimeter() float64 {
+	return 2*r.Width + 2*r.Height
+}
+
+// Circle struct also implementing the Shaper interface.
+type Circle struct {
+	Radius float64
+}
+
+func (c Circle) Area() float64 {
+	return math.Pi * c.Radius * c.Radius
+}
+
+func (c Circle) Perimeter() float64 {
+	return 2 * math.Pi * c.Radius
+}
+
+// Implementing the Stringer interface for User.
+func (u User) String() string {
+	return fmt.Sprintf("User(ID=%d, Username='%s')", u.ID, u.Username)
+}
+
+// SECTION: Generics (Type Parameters)
+// =================================================================
+
+// Number is a constraint that permits any integer or floating-point type.
+type Number interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
+		~float32 | ~float64
+}
+
+// Generic function 'Sum' can work with any slice of a type that satisfies the Number constraint.
+func Sum[T Number](values []T) T {
+	var total T
+	for _, v := range values {
+		total += v
+	}
+	return total
+}
+
+// Generic data structure: a Stack.
+type Stack[T any] struct {
+	items []T
+	lock  sync.RWMutex
+}
+
+func (s *Stack[T]) Push(item T) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if len(s.items) == 0 {
+		var zero T // Return the zero value for the type T
+		return zero, false
+	}
+	item := s.items[len(s.items)-1]
+	s.items = s.items[:len(s.items)-1]
+	return item, true
+}
+
+func (s *Stack[T]) IsEmpty() bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return len(s.items) == 0
+}
+
+// SECTION: Main Function (Orchestrator)
+// =================================================================
+
+func main() {
+	fmt.Printf("--- %s v%s ---\n", AppName, Version)
+
+	// Command-line flag parsing
+	setupAndParseFlags()
+	fmt.Printf("Output prefix from flag: %s\n", *outputPrefix)
+
+	// Each function call demonstrates a specific feature area.
+	demonstrateBasics()
+	demonstrateFunctions()
+	demonstrateDataStructures()
+	demonstrateInterfaces()
+	demonstrateErrorHandling()
+	demonstrateConcurrency()
+	demonstrateGenerics()
+	demonstrateStandardLibrary()
+	demonstrateAdvancedTopics()
+
+	fmt.Println("\n--- Program Finished ---")
+}
+
+// SECTION: Feature Demonstrations
+// =================================================================
+
+// --- 1. Basic Syntax and Control Flow ---
+func demonstrateBasics() {
+	fmt.Println("\n--- 1. Demonstrating Basics ---")
+
+	// Variable declarations
+	var a int = 10
+	var b = 20.5 // Type inference
+	c := "Hello, Go!" // Short declaration
+	var d, e bool = true, false
+
+	fmt.Printf("Variables: a=%d, b=%.2f, c='%s', d=%t, e=%t\n", a, b, c, d, e)
+
+	// Pointers
+	ptrA := &a
+	fmt.Printf("Pointer to 'a': Address=%p, Value=%d\n", ptrA, *ptrA)
+	*ptrA = 100 // Modify 'a' through the pointer
+	fmt.Printf("Value of 'a' after modification via pointer: %d\n", a)
+
+	// Control Flow: if/else
+	if a > 50 && (d || e) {
+		fmt.Println("'a' is greater than 50 and d or e is true.")
+	} else if a == 100 {
+		fmt.Println("'a' is exactly 100.")
+	} else {
+		fmt.Println("Condition not met.")
+	}
+
+	// Control Flow: for loop (3 forms)
+	// Classic for loop
+	sum := 0
+	for i := 0; i < 5; i++ {
+		sum += i
+	}
+	fmt.Printf("Sum from classic for loop: %d\n", sum)
+
+	// "while" loop equivalent
+	j := 0
+	for j < 3 {
+		fmt.Printf("While-style loop, j = %d\n", j)
+		j++
+	}
+
+	// Infinite loop with break
+	k := 0
+	for {
+		fmt.Printf("Infinite loop iteration %d\n", k)
+		if k >= 2 {
+			break // Exit the loop
+		}
+		k++
+	}
+
+	// For loop with range (on a slice)
+	nums := []int{2, 3, 5, 7, 11}
+	for index, value := range nums {
+		fmt.Printf("Range loop: index=%d, value=%d\n", index, value)
+	}
+
+	// Control Flow: switch
+	day := time.Now().Weekday()
+	switch day {
+	case time.Saturday, time.Sunday:
+		fmt.Println("It's the weekend!")
+	case time.Monday:
+		fmt.Println("Ugh, it's Monday.")
+	default:
+		fmt.Println("It's a weekday.")
+	}
+
+	// Switch with a condition (no expression)
+	hour := time.Now().Hour()
+	switch {
+	case hour < 12:
+		fmt.Println("Good morning!")
+	case hour < 17:
+		fmt.Println("Good afternoon!")
+	default:
+		fmt.Println("Good evening!")
+	}
+}
+
+// --- 2. Functions ---
+func demonstrateFunctions() {
+	fmt.Println("\n--- 2. Demonstrating Functions ---")
+
+	// Simple function call
+	result := add(5, 7)
+	fmt.Printf("add(5, 7) = %d\n", result)
+
+	// Function with multiple return values
+	quotient, remainder, err := divide(10, 3)
+	if err != nil {
+		fmt.Println("Error in division:", err)
+	} else {
+		fmt.Printf("10 / 3 = %d remainder %d\n", quotient, remainder)
+	}
+
+	// Function with named return values
+	sum, product := calculate(4, 5)
+	fmt.Printf("calculate(4, 5): sum=%d, product=%d\n", sum, product)
+
+	// Variadic function
+	total := sumVariadic(1, 2, 3, 4, 5)
+	fmt.Printf("Sum of variadic args: %d\n", total)
+	// Can also pass a slice
+	slice := []int{10, 20, 30}
+	totalFromSlice := sumVariadic(slice...)
+	fmt.Printf("Sum of variadic args from slice: %d\n", totalFromSlice)
+
+	// Closures and anonymous functions
+	// A closure "closes over" the variable 'x'
+	x := 10
+	increment := func() int {
+		x++
+		return x
+	}
+	fmt.Println("Closure call 1:", increment())
+	fmt.Println("Closure call 2:", increment())
+
+	// Passing functions as arguments
+	numbers := []int{1, 2, 3, 4}
+	doubled := transform(numbers, func(n int) int {
+		return n * 2
+	})
+	fmt.Println("Transformed (doubled) slice:", doubled)
+}
+
+// Simple function
+func add(a, b int) int {
+	return a + b
+}
+
+// Function with multiple return values, including an error
+func divide(numerator, denominator int) (int, int, error) {
+	if denominator == 0 {
+		return 0, 0, errors.New("division by zero")
+	}
+	return numerator / denominator, numerator % denominator, nil
+}
+
+// Function with named return values
+func calculate(a, b int) (sum, product int) {
+	sum = a + b
+	product = a * b
+	return // Implicitly returns 'sum' and 'product'
+}
+
+// Variadic function
+func sumVariadic(numbers ...int) int {
+	total := 0
+	for _, num := range numbers {
+		total += num
+	}
+	return total
+}
+
+// Function that takes another function as an argument
+func transform(slice []int, fn func(int) int) []int {
+	result := make([]int, len(slice))
+	for i, v := range slice {
+		result[i] = fn(v)
+	}
+	return result
+}
+
+// --- 3. Data Structures ---
+func demonstrateDataStructures() {
+	fmt.Println("\n--- 3. Demonstrating Data Structures ---")
+
+	// Arrays (fixed size)
+	var arr [3]string
+	arr[0] = "Go"
+	arr[1] = "Is"
+	arr[2] = "Fun"
+	fmt.Println("Array:", arr)
+
+	// Slices (dynamic size, view into an array)
+	// Create a slice from an array literal
+	primes := []int{2, 3, 5, 7, 11, 13}
+	fmt.Printf("Slice: len=%d, cap=%d, values=%v\n", len(primes), cap(primes), primes)
+
+	// Slicing a slice
+	subSlice := primes[1:4] // Elements at index 1, 2, 3
+	fmt.Println("Sub-slice:", subSlice)
+
+	// Appending to a slice (may create a new underlying array)
+	subSlice = append(subSlice, 17)
+	fmt.Println("Appended sub-slice:", subSlice)
+	fmt.Println("Original primes slice after append:", primes) // Note: original might be modified if cap allows
+
+	// Using make to create a slice
+	mySlice := make([]int, 5, 10) // length 5, capacity 10
+	fmt.Printf("Made slice: len=%d, cap=%d\n", len(mySlice), cap(mySlice))
+
+	// Maps (key-value store)
+	// Create a map using a literal
+	capitals := map[string]string{
+		"France": "Paris",
+		"Japan":  "Tokyo",
+		"USA":    "Washington D.C.",
+	}
+	fmt.Println("Capitals map:", capitals)
+
+	// Using make to create a map
+	ages := make(map[string]int)
+	ages["Alice"] = 30
+	ages["Bob"] = 25
+	fmt.Println("Ages map:", ages)
+
+	// Accessing map values
+	aliceAge := ages["Alice"]
+	fmt.Println("Alice's age:", aliceAge)
+
+	// Checking for key existence
+	charlieAge, ok := ages["Charlie"]
+	if !ok {
+		fmt.Println("Charlie's age not found.")
+	} else {
+		fmt.Println("Charlie's age:", charlieAge)
+	}
+
+	// Deleting from a map
+	delete(capitals, "France")
+	fmt.Println("Capitals after deleting France:", capitals)
+
+	// Iterating over a map (order is not guaranteed)
+	for country, capital := range capitals {
+		fmt.Printf("The capital of %s is %s\n", country, capital)
+	}
+
+	// Structs
+	user := User{
+		ID:           1,
+		Username:     "gopher",
+		Email:        "gopher@golang.org",
+		IsActive:     true,
+		CreatedAt:    time.Now(),
+		passwordHash: "a_very_secret_hash",
+	}
+	fmt.Printf("User struct: %+v\n", user)
+	fmt.Println(user.String())
+
+	// Struct embedding
+	profile := Profile{
+		User:   user, // Embed the user
+		Bio:    "A curious Gopher.",
+		Avatar: "https://golang.org/doc/gopher/frontpage.png",
+	}
+	// Access embedded fields directly
+	fmt.Printf("Profile for %s (ID: %d), Bio: %s\n", profile.Username, profile.ID, profile.Bio)
+}
+
+// --- 4. Interfaces ---
+func demonstrateInterfaces() {
+	fmt.Println("\n--- 4. Demonstrating Interfaces ---")
+
+	// Create a slice of the Shaper interface type
+	shapes := []Shaper{
+		Rectangle{Width: 10, Height: 5},
+		Circle{Radius: 4},
+		Rectangle{Width: 3, Height: 7},
+	}
+
+	// Polymorphism: loop through different shapes and call the same method
+	for _, s := range shapes {
+		fmt.Printf("Shape: %T, Area: %.2f, Perimeter: %.2f\n", s, s.Area(), s.Perimeter())
+	}
+
+	// Type assertion
+	fmt.Println("\nType Assertion:")
+	for _, s := range shapes {
+		// Check if the shape is a Rectangle
+		if rect, ok := s.(Rectangle); ok {
+			fmt.Printf("This is a Rectangle with width %.2f\n", rect.Width)
+		}
+	}
+
+	// Type switch
+	fmt.Println("\nType Switch:")
+	describeShape := func(s Shaper) {
+		switch v := s.(type) {
+		case Circle:
+			fmt.Printf("It's a Circle with radius %.2f\n", v.Radius)
+		case Rectangle:
+			fmt.Printf("It's a Rectangle with dimensions %.2f x %.2f\n", v.Width, v.Height)
+		default:
+			fmt.Printf("It's an unknown shape of type %T\n", v)
+		}
+	}
+	describeShape(shapes[0])
+	describeShape(shapes[1])
+
+	// Empty interface: can hold values of any type
+	var i interface{}
+	i = 42
+	fmt.Printf("Empty interface holding an int: value=%v, type=%T\n", i, i)
+	i = "hello"
+	fmt.Printf("Empty interface holding a string: value=%v, type=%T\n", i, i)
+}
+
+// --- 5. Error Handling & Defer/Panic/Recover ---
+func demonstrateErrorHandling() {
+	fmt.Println("\n--- 5. Demonstrating Error Handling & Defer/Panic/Recover ---")
+
+	// Standard error handling
+	file, err := os.Open("non_existent_file.txt")
+	if err != nil {
+		// Log the error using a structured logger
+		log.Printf("Error opening file: %v", err)
+	} else {
+		// 'defer' ensures this runs before the function returns
+		defer file.Close()
+	}
+
+	// Custom error type
+	if err := checkValue(-5); err != nil {
+		var negErr *NegativeValueError
+		// errors.As checks if the error is or wraps our custom type
+		if errors.As(err, &negErr) {
+			fmt.Printf("Caught custom error: %s (Value: %d)\n", negErr, negErr.Value)
+		}
+	}
+
+	// Panic and Recover
+	fmt.Println("Calling function that might panic...")
+	safePanicFunction()
+	fmt.Println("Function that might panic has returned safely.")
+}
+
+// Custom error type
+type NegativeValueError struct {
+	Value int
+}
+
+func (e *NegativeValueError) Error() string {
+	return fmt.Sprintf("value %d cannot be negative", e.Value)
+}
+
+func checkValue(val int) error {
+	if val < 0 {
+		return &NegativeValueError{Value: val}
+	}
+	return nil
+}
+
+func panickingFunction() {
+	fmt.Println("About to panic!")
+	// This will cause a runtime panic
+	panic("something went terribly wrong")
+	// This line is never reached
+	fmt.Println("This will not be printed.")
+}
+
+func safePanicFunction() {
+	// 'defer' and 'recover' are used together to handle panics
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered from panic: %v\n", r)
+			// You can inspect the stack trace if needed
+			// debug.PrintStack()
+		}
+	}()
+
+	panickingFunction()
+	fmt.Println("This line is also not reached if a panic occurs above.")
+}
+
+// --- 6. Concurrency ---
+func demonstrateConcurrency() {
+	fmt.Println("\n--- 6. Demonstrating Concurrency ---")
+
+	// Goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		fmt.Println("Hello from a goroutine!")
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	// Channels for communication
+	messages := make(chan string, 2) // Buffered channel of size 2
+	go func() {
+		messages <- "ping"
+		messages <- "pong"
+		close(messages) // Important to close channels when done sending
+	}()
+
+	fmt.Println("Waiting for messages from channel...")
+	// Ranging over a channel
+	for msg := range messages {
+		fmt.Printf("Received: %s\n", msg)
+	}
+
+	// Select statement for multiple channels
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		c1 <- "one"
+	}()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		c2 <- "two"
+	}()
+
+	fmt.Println("Waiting on two channels with select...")
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1 := <-c1:
+			fmt.Println("Received from c1:", msg1)
+		case msg2 := <-c2:
+			fmt.Println("Received from c2:", msg2)
+		case <-time.After(1 * time.Second):
+			fmt.Println("Timeout waiting for channels.")
+		}
+	}
+
+	// Mutex for shared state
+	numWorkers := 100
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			globalMutex.Lock()
+			globalCounter++
+			globalMutex.Unlock()
+		}()
+	}
+	// Also demonstrate atomic operations which can be more efficient
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			atomic.AddInt64(&globalCounter, 1)
+		}()
+	}
+
+	// Context for cancellation
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	wg.Add(1)
+	go workerWithContext(ctx, &wg)
+
+	wg.Wait() // Wait for all goroutines to finish
+	fmt.Printf("Final global counter value: %d\n", globalCounter)
+
+	// sync.Once example
+	var once sync.Once
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			once.Do(func() {
+				fmt.Printf("This initialization runs only once, from goroutine %d\n", id)
+			})
+		}(i)
+	}
+	wg.Wait()
+}
+
+func workerWithContext(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	fmt.Println("Worker with context started...")
+	select {
+	case <-time.After(1 * time.Second):
+		fmt.Println("Worker finished its job.")
+	case <-ctx.Done():
+		// The context was canceled (e.g., due to timeout)
+		fmt.Printf("Worker canceled: %v\n", ctx.Err())
+	}
+}
+
+// --- 7. Generics ---
+func demonstrateGenerics() {
+	fmt.Println("\n--- 7. Demonstrating Generics ---")
+
+	intSlice := []int{10, 20, 5, 15}
+	floatSlice := []float64{1.1, 2.2, 3.3}
+
+	fmt.Printf("Sum of ints: %d\n", Sum(intSlice))
+	fmt.Printf("Sum of floats: %.2f\n", Sum(floatSlice))
+
+	// Using the generic Stack
+	stringStack := Stack[string]{}
+	stringStack.Push("Hello")
+	stringStack.Push("Generics")
+	stringStack.Push("World")
+
+	fmt.Println("Popping from string stack:")
+	for !stringStack.IsEmpty() {
+		item, _ := stringStack.Pop()
+		fmt.Println(item)
+	}
+
+	intStack := Stack[int]{}
+	intStack.Push(100)
+	intStack.Push(200)
+	val, _ := intStack.Pop()
+	fmt.Printf("Popped from int stack: %d\n", val)
+}
+
+// --- 8. Standard Library ---
+func demonstrateStandardLibrary() {
+	fmt.Println("\n--- 8. Demonstrating Standard Library ---")
+
+	// JSON marshaling and unmarshaling
+	demonstrateJSON()
+
+	// Text and HTML templates
+	demonstrateTemplates()
+
+	// File I/O
+	demonstrateFileIO()
+
+	// HTTP Client and Server
+	demonstrateHTTP()
+
+	// Regular Expressions
+	demonstrateRegexp()
+
+	// Sorting
+	demonstrateSorting()
+}
+
+func demonstrateJSON() {
+	fmt.Println("\n--- JSON ---")
+	p := Profile{
+		User: User{
+			ID:        101,
+			Username:  "json_user",
+			Email:     "json@example.com",
+			IsActive:  true,
+			CreatedAt: time.Now(),
+		},
+		Bio:    "Loves to be marshaled.",
+		Avatar: "url/to/avatar.jpg",
+	}
+
+	// Marshaling (Go struct to JSON)
+	jsonData, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		log.Fatalf("JSON marshaling failed: %v", err)
+	}
+	fmt.Println("Marshaled JSON:\n", string(jsonData))
+
+	// Unmarshaling (JSON to Go struct)
+	var p2 Profile
+	err = json.Unmarshal(jsonData, &p2)
+	if err != nil {
+		log.Fatalf("JSON unmarshaling failed: %v", err)
+	}
+	fmt.Printf("Unmarshaled struct: %+v\n", p2)
+}
+
+func demonstrateTemplates() {
+	fmt.Println("\n--- Templates ---")
+	// text/template
+	const textTpl = "User: {{.Username}} has {{.Follower}} followers. Bio: {{.Bio}}"
+	t, err := template.New("user").Parse(textTpl)
+	if err != nil {
+		log.Fatalf("Failed to parse text template: %v", err)
+	}
+	profileData := Profile{User: User{Username: "template_gopher"}, Follower: 1234, Bio: "Lives in a template."}
+	var buf bytes.Buffer
+	err = t.Execute(&buf, profileData)
+	if err != nil {
+		log.Fatalf("Failed to execute text template: %v", err)
+	}
+	fmt.Println("Text template output:", buf.String())
+
+	// html/template (for security against XSS)
+	const htmlTpl = `<h1>{{.Username}}</h1><p>{{.Bio}}</p>`
+	th, err := template.New("user_html").Parse(htmlTpl)
+	if err != nil {
+		log.Fatalf("Failed to parse html template: %v", err)
+	}
+	// Let's use a bio with HTML characters to show escaping
+	profileData.Bio = "<script>alert('XSS');</script><b>Bold Bio!</b>"
+	buf.Reset()
+	err = th.Execute(&buf, profileData)
+	if err != nil {
+		log.Fatalf("Failed to execute html template: %v", err)
+	}
+	fmt.Println("HTML template output:", buf.String())
+}
+
+func demonstrateFileIO() {
+	fmt.Println("\n--- File I/O ---")
+	filename := "testfile.txt"
+	content := []byte("This is a test file.\nIt contains multiple lines.\nGo is awesome!\n")
+
+	// Write to a file
+	err := os.WriteFile(filename, content, 0644)
+	if err != nil {
+		log.Fatalf("Failed to write to file: %v", err)
+	}
+	fmt.Printf("Successfully wrote to %s\n", filename)
+
+	// Read from a file
+	readContent, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Failed to read from file: %v", err)
+	}
+	fmt.Printf("Content read from %s:\n%s", filename, string(readContent))
+
+	// Clean up the file
+	defer os.Remove(filename)
+}
+
+func demonstrateHTTP() {
+	fmt.Println("\n--- HTTP ---")
+
+	// Simple HTTP Server (running in a goroutine)
+	serverAddr := "127.0.0.1:8090"
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello, you've hit %s", r.URL.Path)
+	})
+	go func() {
+		// Use a minimal timeout context to stop the server after the client call
+		server := &http.Server{Addr: serverAddr}
+		go func() {
+			time.Sleep(2 * time.Second)
+			server.Shutdown(context.Background())
+		}()
+		fmt.Printf("Starting temporary server on %s\n", serverAddr)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Printf("HTTP server ListenAndServe: %v", err)
+		}
+		fmt.Println("HTTP server shut down.")
+	}()
+	time.Sleep(100 * time.Millisecond) // Give server time to start
+
+	// HTTP Client
+	resp, err := http.Get("http://" + serverAddr + "/hello")
+	if err != nil {
+		log.Printf("HTTP GET failed: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Failed to read HTTP response body: %v", err)
+		return
+	}
+	fmt.Printf("HTTP client received: [Status: %s] [Body: %s]\n", resp.Status, string(body))
+}
+
+func demonstrateRegexp() {
+	fmt.Println("\n--- Regular Expressions ---")
+	text := "My email is test@example.com and another is user@domain.org."
+	// Compile a regular expression to find email addresses
+	re, err := regexp.Compile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Find the first match
+	fmt.Printf("First email found: %s\n", re.FindString(text))
+
+	// Find all matches
+	matches := re.FindAllString(text, -1)
+	fmt.Printf("All emails found: %v\n", matches)
+
+	// Replace matches
+	replaced := re.ReplaceAllString(text, "[REDACTED]")
+	fmt.Printf("Text with emails redacted: %s\n", replaced)
+}
+
+func demonstrateSorting() {
+	fmt.Println("\n--- Sorting ---")
+	// Sorting built-in types
+	strs := []string{"c", "a", "b"}
+	sort.Strings(strs)
+	fmt.Println("Sorted strings:", strs)
+
+	ints := []int{7, 2, 9, 1}
+	sort.Ints(ints)
+	fmt.Println("Sorted ints:", ints)
+
+	// Custom sorting
+	people := []User{
+		{Username: "Alice", ID: 2},
+		{Username: "Bob", ID: 3},
+		{Username: "Charlie", ID: 1},
+	}
+
+	// Sort by ID
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].ID < people[j].ID
+	})
+	fmt.Println("People sorted by ID:", people)
+
+	// Sort by Username
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Username < people[j].Username
+	})
+	fmt.Println("People sorted by Username:", people)
+}
+
+// --- 9. Advanced Topics ---
+func demonstrateAdvancedTopics() {
+	fmt.Println("\n--- 9. Demonstrating Advanced Topics ---")
+
+	// Reflection
+	demonstrateReflection()
+
+	// Unsafe pointers
+	demonstrateUnsafe()
+
+	// CGo
+	demonstrateCGo()
+
+	// Runtime information
+	demonstrateRuntime()
+}
+
+func demonstrateReflection() {
+	fmt.Println("\n--- Reflection ---")
+	s := Profile{User: User{Username: "reflect_user", ID: 99}, Bio: "I am a struct."}
+
+	// Get Type and Value of a variable
+	t := reflect.TypeOf(s)
+	v := reflect.ValueOf(s)
+
+	fmt.Printf("Type: %s, Kind: %s\n", t.Name(), t.Kind())
+
+	// Iterate over fields of a struct
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+
+		// Get struct tag
+		tag := field.Tag.Get("json")
+
+		// Handle embedded structs
+		if field.Anonymous {
+			fmt.Printf("  Embedded Field %d: Name=%s, Type=%s\n", i, field.Name, field.Type)
+			// You could recurse into the embedded struct here
+			continue
+		}
+
+		fmt.Printf("  Field %d: Name=%s, Type=%s, Value=%v, JSON Tag='%s'\n",
+			i, field.Name, field.Type, value.Interface(), tag)
+	}
+
+	// Call a method by name
+	vec := Vector{X: 3, Y: 4}
+	vecValue := reflect.ValueOf(vec)
+	method := vecValue.MethodByName("Length")
+	if method.IsValid() {
+		// Method takes no arguments
+		results := method.Call(nil)
+		if len(results) > 0 {
+			fmt.Printf("Result of calling Vector.Length via reflection: %f\n", results[0].Float())
+		}
+	}
+}
+
+func demonstrateUnsafe() {
+	fmt.Println("\n--- Unsafe Pointers ---")
+	fmt.Println("WARNING: Using 'unsafe' bypasses Go's type safety and memory guarantees. Use with extreme caution.")
+
+	type MyStruct struct {
+		A int32
+		B bool
+		C int64
+	}
+
+	s := MyStruct{A: 123, B: true, C: 456}
+
+	// Use unsafe to get a pointer to field C from the struct pointer
+	// This demonstrates pointer arithmetic, which is normally not allowed in Go.
+	// 1. Get a pointer to the struct
+	sPtr := &s
+	// 2. Convert it to an unsafe.Pointer
+	unsafeSPtr := unsafe.Pointer(sPtr)
+	// 3. Calculate the offset of field C.
+	//    The offset of C is after A (4 bytes on 64-bit) and B (1 byte, but with padding).
+	//    Using reflect is a safer way to get offset, but this is a raw demo.
+	//    Let's assume A (int32) is 4 bytes and B (bool) is 1 byte, but
+	//    C (int64) must be 8-byte aligned, so there's 3 bytes of padding.
+	//    Total offset = 4 (A) + 1 (B) + 3 (padding) = 8 bytes.
+	offsetC := unsafe.Offsetof(s.C) // This is the safe way to get offset
+	fmt.Printf("Offset of field C is: %d bytes\n", offsetC)
+
+	// 4. Add the offset to the struct's pointer
+	cPtrUnsafe := unsafe.Pointer(uintptr(unsafeSPtr) + offsetC)
+	// 5. Convert the resulting unsafe.Pointer to a typed pointer (*int64)
+	cPtr := (*int64)(cPtrUnsafe)
+
+	fmt.Printf("Original value of C: %d\n", s.C)
+	fmt.Printf("Value of C accessed via unsafe pointer: %d\n", *cPtr)
+
+	// Modify the value through the unsafe pointer
+	*cPtr = 999
+	fmt.Printf("Value of C after modification via unsafe pointer: %d\n", s.C)
+
+	// Another common use: converting between pointer types
+	var f float64 = 1.0
+	// Get the bit representation of a float64 as a uint64
+	bits := *(*uint64)(unsafe.Pointer(&f))
+	fmt.Printf("Float64 %f has integer bit representation: 0x%x\n", f, bits)
+}
+
+func demonstrateCGo() {
+	fmt.Println("\n--- CGo ---")
+	// CGo allows Go programs to call C code.
+	// The import "C" is a special pseudo-package.
+	// The comment block just above `import "C"` contains the C code.
+
+	fmt.Println("Calling a C function from Go...")
+	// Create a C-style string
+	cString := C.CString("Hello from Go!")
+	// Defer freeing the C string memory to avoid memory leaks
+	defer C.free(unsafe.Pointer(cString))
+
+	// Call the C function
+	C.myCFunction(cString)
+}
+
+func demonstrateRuntime() {
+	fmt.Println("\n--- Runtime ---")
+	fmt.Printf("Go Version: %s\n", runtime.Version())
+	fmt.Printf("Operating System: %s\n", runtime.GOOS)
+	fmt.Printf("Architecture: %s\n", runtime.GOARCH)
+	fmt.Printf("Number of CPUs: %d\n", runtime.NumCPU())
+	fmt.Printf("Number of Goroutines: %d\n", runtime.NumGoroutine())
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Allocated Memory = %v MiB\n", m.Alloc/1024/1024)
+	fmt.Printf("Total Allocated Memory = %v MiB\n", m.TotalAlloc/1024/1024)
+	fmt.Printf("System Memory = %v MiB\n", m.Sys/1024/1024)
+}
+
+// --- Utility Functions ---
+func setupAndParseFlags() {
+	// flag.String defines a string flag with a name, default value, and help text.
+	// It returns a pointer to a string.
+	outputPrefix = flag.String("prefix", "DEFAULT", "A prefix for output messages.")
+
+	// Example of another flag type
+	port := flag.Int("port", 8080, "Port number for a hypothetical server.")
+
+	// Parse the command-line flags from os.Args[1:].
+	flag.Parse()
+
+	// You can access the parsed flags like this:
+	_ = *port // Use the variable to avoid "unused" error
+}

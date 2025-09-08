@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "dataset_build"
+version = "0.1.0"
+authors = [{ name="electroglyph" },]
+description = "Build a multilingual dataset for imatrix or quantization calibration for LLMs or embedding models"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+dependencies = ["transformers", "jinja2", "humanize"]
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.setuptools.package-data]
+dataset_build = ["data/*", "*.txt"]
+[project.scripts]
+dataset_build = "dataset_build.main:run"
+[project.urls]
+Homepage = "https://github.com/electroglyph/dataset_build"
+Repository = "https://github.com/electroglyph/dataset_build"

@@ -1,0 +1,790 @@
+@file:JvmName("KotlinComprehensiveDemo")
+
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.*
+import java.io.File
+import java.io.IOException
+import java.math.BigDecimal
+import java.time.LocalDateTime
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.properties.Delegates
+import kotlin.properties.ReadWriteProperty
+import kotlin.random.Random
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
+import kotlin.reflect.full.memberProperties
+
+// Top-level constants demonstrate compile-time constants.
+const val APP_VERSION = "1.0.0-alpha"
+const val MAX_RETRIES = 3
+const val PI_APPROXIMATION = 3.14159
+
+// Top-level variables and properties.
+var globalCounter = 0
+val startTime: Long by lazy { System.currentTimeMillis() }
+
+/**
+ * The main entry point for the comprehensive Kotlin demonstration.
+ * It uses a `runBlocking` coroutine builder to allow top-level suspension.
+ */
+fun main() = runBlocking {
+    println("--- Kotlin Comprehensive Demo ---")
+    println("Version: $APP_VERSION")
+    println("Start time lazy-initialized at: $startTime")
+    println("===============================\n")
+
+    // Each function demonstrates a different aspect of the Kotlin language.
+    demonstrateCoreLanguageFeatures()
+    demonstrateClassesAndObjects()
+    demonstrateAdvancedFunctionsAndLambdas()
+    demonstrateCollectionProcessing()
+    demonstrateGenerics()
+    demonstrateOperatorOverloadingAndDelegation()
+
+    // Coroutines and asynchronous programming are a key feature of modern Kotlin.
+    println("\n--- Coroutines Showcase ---")
+    val coroutineJobs = launch {
+        demonstrateCoroutines()
+        demonstrateFlows()
+        demonstrateChannels()
+    }
+    coroutineJobs.join() // Wait for all coroutine demos to complete.
+
+    demonstrateMetaprogramming()
+    demonstrateExperimentalFeatures()
+
+    println("\n--- Demo Finished ---")
+    val totalTime = System.currentTimeMillis() - startTime
+    println("Total execution time: ${totalTime}ms")
+}
+
+// =================================================================
+// SECTION 1: CORE LANGUAGE CONSTRUCTS
+// =================================================================
+
+/**
+ * Showcases fundamental Kotlin syntax, including variables, types,
+ * nullability, and control flow structures.
+ */
+fun demonstrateCoreLanguageFeatures() {
+    println("--- Core Language Features ---")
+
+    // 1.1 Variables: val (immutable) and var (mutable) with type inference.
+    val immutableString: String = "This is a val (read-only)."
+    var mutableInt: Int = 10
+    mutableInt += 5 // mutableInt can be reassigned.
+
+    val inferredType = 3.14 // Inferred as Double
+    val longValue = 100L
+    val floatValue = 9.8f
+    val hexValue = 0x1F
+    val binaryValue = 0b010101
+
+    println("Values: $immutableString, mutableInt=$mutableInt, inferredType=$inferredType")
+    println("Numeric types: Long=$longValue, Float=$floatValue, Hex=$hexValue, Binary=$binaryValue")
+
+    // 1.2 Nullability: The type system distinguishes between nullable and non-nullable types.
+    var nullableString: String? = "I can hold a null value."
+    println("Length is: ${nullableString?.length}") // Safe call operator `?.`
+    
+    nullableString = null
+    println("Now, length is: ${nullableString?.length ?: "N/A"}") // Elvis operator `?:` for default value.
+
+    try {
+        // Not-null assertion `!!` throws NullPointerException if the value is null. Use with caution.
+        nullableString!!.length 
+    } catch (e: NullPointerException) {
+        println("Caught expected NPE from !! operator.")
+    }
+
+    // 1.3 String Templates and Multiline Strings
+    val user = "Alex"
+    println("User is $user. User's name has ${user.length} characters.")
+
+    val multiLineJson = """
+        {
+            "name": "Kotlin",
+            "version": "$APP_VERSION"
+        }
+    """.trimIndent()
+    println("Multiline String:\n$multiLineJson")
+
+    // 1.4 Control Flow: if/else as an expression
+    val a = Random.nextInt(0, 100)
+    val b = Random.nextInt(0, 100)
+    val max = if (a > b) {
+        println("Chose a ($a)")
+        a
+    } else {
+        println("Chose b ($b)")
+        b
+    }
+    println("Max value is $max")
+
+    // 1.5 Control Flow: `when` expression (a powerful switch)
+    val score = 85
+    val grade = when (score) {
+        in 90..100 -> "A"
+        in 80..89 -> "B"
+        in 70..79 -> "C"
+        else -> "D or F"
+    }
+    println("A score of $score gets a grade of '$grade'")
+
+    val obj: Any = 123
+    when (obj) {
+        is String -> println("It's a String with smart cast: length is ${obj.length}")
+        is Int -> println("It's an Int: value is $obj")
+        !is Long -> println("It's not a Long")
+        else -> println("Unknown type")
+    }
+
+    // 1.6 Loops: for, while, do-while
+    println("Counting from 1 to 5:")
+    for (i in 1..5) {
+        print("$i ")
+    }
+    println()
+
+    println("Iterating over a list with index:")
+    val fruits = listOf("apple", "banana", "cherry")
+    for ((index, fruit) in fruits.withIndex()) {
+        println("Item at $index is $fruit")
+    }
+    
+    println("Iterating with a step:")
+    for (i in 10 downTo 0 step 2) {
+        print("$i ")
+    }
+    println()
+
+    // 1.7 Labeled breaks and continues
+    outerLoop@ for (x in 1..3) {
+        for (y in 1..3) {
+            if (x == 2 && y == 2) {
+                println("\nBreaking outer loop from inner loop at ($x, $y)")
+                break@outerLoop
+            }
+            if (x == 1 && y == 3) {
+                println("\nContinuing outer loop from ($x, $y)")
+                continue@outerLoop
+            }
+            print("($x, $y) ")
+        }
+    }
+    println()
+
+    // 1.8 Exception handling as an expression
+    val numberInput = "42a"
+    val parsedNumber = try {
+        Integer.parseInt(numberInput)
+    } catch (e: NumberFormatException) {
+        println("Caught an NFE: ${e.message}")
+        -1 // Return a default value
+    } finally {
+        println("This finally block always executes.")
+    }
+    println("Parsed number: $parsedNumber")
+
+    // Single expression function call
+    println("Double of 15 is ${double(15)}")
+}
+
+// Single expression function
+fun double(x: Int): Int = x * 2
+
+// Function with named arguments and default parameters
+fun createUserProfile(
+    username: String,
+    email: String,
+    age: Int? = null,
+    isAdmin: Boolean = false
+) {
+    println("Creating user: $username ($email), Age: ${age ?: "N/A"}, Admin: $isAdmin")
+}
+
+
+// =================================================================
+// SECTION 2: CLASSES AND OBJECTS
+// =================================================================
+
+// 2.1 Simple class with primary constructor and init block
+class Person(val name: String, var age: Int) {
+    // Property with custom getter/setter
+    var isAdult: Boolean = age >= 18
+        private set // The setter is private and can only be used inside this class.
+
+    var nickname: String = ""
+        set(value) {
+            println("Setting nickname for $name...")
+            field = value.trim().toLowerCase()
+            println("Nickname set to '$field'")
+        }
+
+    init {
+        // This block is executed when an instance is created.
+        println("Person initialized: $name, age $age")
+        globalCounter++
+    }
+
+    // Secondary constructor delegating to the primary constructor
+    constructor(name: String) : this(name, 0) {
+        println("Secondary constructor called for $name")
+    }
+
+    fun greet() {
+        println("Hello, my name is $name.")
+    }
+
+    fun haveBirthday() {
+        age++
+        if (age >= 18) {
+            isAdult = true
+        }
+    }
+}
+
+// 2.2 Data class: auto-generates equals(), hashCode(), toString(), copy(), componentN()
+data class User(val id: Long, val username: String, val email: String)
+
+// 2.3 Enum class with properties and methods
+enum class Color(val rgb: Int) {
+    RED(0xFF0000),
+    GREEN(0x00FF00),
+    BLUE(0x0000FF),
+    YELLOW(0xFFFF00);
+
+    fun isPrimary(): Boolean {
+        return this == RED || this == GREEN || this == BLUE
+    }
+}
+
+// 2.4 Sealed class for representing restricted class hierarchies (like a super-powered enum)
+sealed class NetworkResult {
+    data class Success(val data: String) : NetworkResult()
+    data class Error(val code: Int, val message: String) : NetworkResult()
+    object Loading : NetworkResult()
+}
+
+// 2.5 Singleton pattern using `object`
+object SingletonManager {
+    private val cache = mutableMapOf<String, Any>()
+    init {
+        println("SingletonManager initialized.")
+    }
+    fun put(key: String, value: Any) { cache[key] = value }
+    fun get(key: String): Any? = cache[key]
+}
+
+// 2.6 Interface with default implementation
+interface Flyable {
+    val maxSpeed: Int
+    fun fly() {
+        println("Flying at a speed of up to $maxSpeed km/h")
+    }
+    fun land() // Abstract method that must be implemented
+}
+
+// 2.7 Inheritance: `open` allows subclassing, `override` modifies behavior
+open class Animal(val name: String) {
+    open fun makeSound() {
+        println("$name makes a generic animal sound")
+    }
+}
+
+class Dog(name: String, val breed: String) : Animal(name) {
+    override fun makeSound() {
+        println("$name, the $breed, barks: Woof!")
+    }
+}
+
+// 2.8 Class implementing an interface
+class Bird(override val maxSpeed: Int) : Flyable {
+    override fun land() {
+        println("The bird is landing gracefully.")
+    }
+    // Can optionally override the default method
+    override fun fly() {
+        println("A bird is flapping its wings, max speed $maxSpeed.")
+    }
+}
+
+// 2.9 Companion object for factory methods and static-like members
+class Secret private constructor(val secretCode: String) {
+    companion object Factory {
+        private const val SALT = "k0tl1n-d3m0"
+        fun createFromPassword(password: String): Secret {
+            val code = (password + SALT).hashCode().toString(16)
+            return Secret(code)
+        }
+        @JvmStatic fun getInfo() { println("This is a secret factory.") }
+    }
+}
+
+// 2.10 Nested and Inner classes
+class Outer {
+    private val bar: Int = 1
+    class Nested {
+        // Cannot access members of Outer class
+        fun foo() = "I'm a nested class"
+    }
+    inner class Inner {
+        // Can access members of Outer class
+        fun foo() = "I'm an inner class, I can see bar: $bar"
+    }
+}
+
+fun demonstrateClassesAndObjects() {
+    println("\n--- Classes and Objects Showcase ---")
+
+    val person1 = Person("Alice", 30)
+    person1.greet()
+    person1.nickname = "  Ali  "
+    person1.haveBirthday()
+    println("${person1.name} is now ${person1.age} and is an adult: ${person1.isAdult}")
+
+    val person2 = Person("Bob")
+    println("${person2.name} is ${person2.age} years old.")
+
+    val user1 = User(1, "charlie", "charlie@example.com")
+    val user2 = user1.copy(id = 2) // Using copy() from data class
+    println("User1: $user1")
+    println("User2: $user2")
+    val (id, username, _) = user1 // Destructuring declaration
+    println("Destructured user1: id=$id, username=$username")
+
+    fun handleResult(result: NetworkResult) {
+        when (result) {
+            is NetworkResult.Success -> println("Data received: ${result.data}")
+            is NetworkResult.Error -> println("Error ${result.code}: ${result.message}")
+            NetworkResult.Loading -> println("Loading...")
+        }
+    }
+    handleResult(NetworkResult.Loading)
+    handleResult(NetworkResult.Success("{\"name\":\"Kotlin\"}"))
+    
+    SingletonManager.put("user_id", 12345)
+    println("Retrieved from singleton: ${SingletonManager.get("user_id")}")
+
+    val dog = Dog("Buddy", "Golden Retriever")
+    dog.makeSound()
+
+    val secret = Secret.createFromPassword("supersecret123")
+    println("Generated secret code: ${secret.secretCode}")
+    
+    val outer = Outer()
+    println(Outer.Nested().foo())
+    println(outer.Inner().foo())
+}
+
+// =================================================================
+// SECTION 3: ADVANCED FUNCTIONS & LAMBDAS
+// =================================================================
+
+// 3.1 Extension function: adding new functions to existing classes
+fun String.shout(): String = this.toUpperCase() + "!!!"
+
+// 3.2 Infix function for DSL-like syntax
+infix fun Int.toThePowerOf(exponent: Int): Long {
+    var result = 1L
+    repeat(exponent) { result *= this }
+    return result
+}
+
+// 3.3 Higher-order function: takes a function as an argument
+fun calculate(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
+    return operation(a, b)
+}
+
+// 3.4 Function returning a lambda
+fun getMultiplier(factor: Int): (Int) -> Int {
+    return { number -> number * factor }
+}
+
+// 3.5 Type alias for a complex function type
+typealias StringTransformer = (String) -> String
+fun applyTransformation(text: String, transformer: StringTransformer): String = transformer(text)
+
+// 3.6 Local function
+fun processData(data: List<String>) {
+    fun validate(item: String): Boolean {
+        // A function defined inside another function
+        return item.isNotBlank() && item.length > 3
+    }
+    data.filter(::validate).forEach { println("Processing valid item: $it") }
+}
+
+fun demonstrateAdvancedFunctionsAndLambdas() {
+    println("\n--- Advanced Functions & Lambdas Showcase ---")
+
+    val message = "hello kotlin"
+    println(message.shout())
+
+    val powerResult = 2 toThePowerOf 10
+    println("2 to the power of 10 is $powerResult")
+
+    val sum = calculate(10, 5) { x, y -> x + y }
+    println("Sum using HOF with lambda: $sum")
+
+    val product = calculate(10, 5, ::multiply) // Using a function reference
+    println("Product using HOF with function reference: $product")
+
+    val double = getMultiplier(2)
+    println("Double of 15 is ${double(15)}")
+
+    // 3.7 Scope Functions: let, run, with, apply, also
+    val person = Person("Dave", 40).apply {
+        // `apply`: returns the context object. Good for configuration.
+        age = 41
+        nickname = "davy"
+    }
+    println("Configured person with apply: ${person.name}, ${person.age}, ${person.nickname}")
+
+    val nameLength: Int? = person.let {
+        // `let`: returns lambda result. Good for null checks and variable scoping.
+        println("Inside let block for ${it.name}")
+        it.name.length
+    }
+    println("Length of name from let: $nameLength")
+
+    // `run`: combination of `let` and `with`. Returns lambda result.
+    val bio = person.run {
+        "This is $name, age $age. Nickname: $nickname."
+    }
+    println(bio)
+}
+
+// Function to be used as a reference
+fun multiply(a: Int, b: Int) = a * b
+
+// =================================================================
+// SECTION 4: COLLECTION PROCESSING
+// =================================================================
+
+fun demonstrateCollectionProcessing() {
+    println("\n--- Collection Processing Showcase ---")
+    val numbers = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    
+    // map, filter, forEach
+    println("Squared even numbers:")
+    numbers.filter { it % 2 == 0 }      // [2, 4, 6, 8, 10]
+           .map { it * it }            // [4, 16, 36, 64, 100]
+           .forEach { print("$it ") }
+    println()
+    
+    // find, firstOrNull
+    val firstEven = numbers.find { it % 2 == 0 } // Returns 2
+    println("First even number: $firstEven")
+
+    // reduce, fold
+    val sum = numbers.reduce { acc, i -> acc + i } // sum = 55
+    println("Sum using reduce: $sum")
+    val sumWithInitial = numbers.fold(100) { acc, i -> acc + i } // sum = 155
+    println("Sum using fold with initial 100: $sumWithInitial")
+
+    // groupBy
+    val words = listOf("apple", "banana", "apricot", "cherry", "blueberry")
+    val groupedByFirstLetter = words.groupBy { it.first() }
+    println("Words grouped by first letter: $groupedByFirstLetter")
+    
+    // flatMap
+    val nestedList = listOf(listOf(1, 2), listOf(3, 4, 5), listOf(6))
+    val flattened = nestedList.flatMap { it }
+    println("Flattened list: $flattened")
+
+    // Sequences for lazy evaluation on large collections
+    println("Processing with a Sequence:")
+    val result = (1..1_000_000).asSequence()
+        .filter { it % 123 == 0 }
+        .map { it * 2 }
+        .take(5)
+        .toList()
+    println("First 5 multiples of 123, doubled: $result")
+}
+
+// =================================================================
+// SECTION 5: GENERICS
+// =================================================================
+
+// 5.1 Generic class
+class Box<T>(var item: T) {
+    fun peek(): T = item
+    fun put(newItem: T) { item = newItem }
+}
+
+// 5.2 Generic function with type constraints
+fun <T : Comparable<T>> findMax(vararg items: T): T? {
+    if (items.isEmpty()) return null
+    var max = items[0]
+    for (i in 1 until items.size) {
+        if (items[i] > max) max = items[i]
+    }
+    return max
+}
+
+// 5.3 Declaration-site variance (covariance `out` and contravariance `in`)
+interface Producer<out T> { fun produce(): T }
+class StringProducer : Producer<String> { override fun produce() = "Produced" }
+
+interface Consumer<in T> { fun consume(item: T) }
+class AnyConsumer : Consumer<Any> { override fun consume(item: Any) { println("Consumed: $item") } }
+
+// 5.4 Inline function with reified type parameter
+inline fun <reified T> Collection<*>.countInstances(): Int {
+    return this.filter { it is T }.count()
+}
+
+fun demonstrateGenerics() {
+    println("\n--- Generics Showcase ---")
+
+    val intBox = Box(10)
+    intBox.put(20)
+    println("Item in intBox: ${intBox.peek()}")
+
+    println("Max of 5, 10, 3, 8 is ${findMax(5, 10, 3, 8)}")
+
+    // Covariance (`out`) allows assigning a Producer<String> to a Producer<Any>
+    val producer: Producer<Any> = StringProducer()
+    println(producer.produce())
+
+    // Contravariance (`in`) allows assigning a Consumer<Any> to a Consumer<String>
+    val consumer: Consumer<String> = AnyConsumer()
+    consumer.consume("A string to consume")
+
+    val mixedList = listOf("hello", 1, 2.0, "world", true, "kotlin")
+    println("Number of Strings in mixed list: ${mixedList.countInstances<String>()}")
+    println("Number of Ints in mixed list: ${mixedList.countInstances<Int>()}")
+}
+
+// =================================================================
+// SECTION 6: OPERATOR OVERLOADING AND DELEGATION
+// =================================================================
+
+// 6.1 Operator Overloading
+data class Vector(val x: Int, val y: Int) {
+    operator fun plus(other: Vector): Vector = Vector(x + other.x, y + other.y)
+    operator fun unaryMinus(): Vector = Vector(-x, -y)
+    operator fun invoke() { println("Invoked Vector($x, $y)") }
+}
+
+// 6.2 Custom property delegate
+class TrimmedStringDelegate : ReadWriteProperty<Any?, String> {
+    private var backingField = ""
+    override fun getValue(thisRef: Any?, property: KProperty<*>): String = backingField
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+        backingField = value.trim()
+    }
+}
+
+class DelegatedPropertiesExample {
+    // 6.3 Standard delegates: lazy
+    val lazyValue: String by lazy {
+        println("Computing lazy value...")
+        "This is a lazy-loaded value"
+    }
+
+    // 6.4 Standard delegates: observable
+    var observableValue: String by Delegates.observable("<initial>") { prop, old, new ->
+        println("${prop.name} changed from '$old' to '$new'")
+    }
+    
+    // 6.5 Using the custom delegate
+    var trimmedName: String by TrimmedStringDelegate()
+}
+
+fun demonstrateOperatorOverloadingAndDelegation() {
+    println("\n--- Operator Overloading and Delegation Showcase ---")
+
+    val v1 = Vector(2, 3)
+    val v2 = Vector(5, 1)
+    println("$v1 + $v2 = ${v1 + v2}")
+    v1() // Invokes the object
+
+    val delegateExample = DelegatedPropertiesExample()
+    println("Accessing lazy value for the first time...")
+    println(delegateExample.lazyValue)
+    println("Accessing it again (no computation)...")
+    println(delegateExample.lazyValue)
+
+    delegateExample.observableValue = "First change"
+    delegateExample.trimmedName = "  padded name  "
+    println("Trimmed name: '${delegateExample.trimmedName}'")
+}
+
+// =================================================================
+// SECTION 7: COROUTINES, FLOW, AND CHANNELS
+// =================================================================
+
+// 7.1 Suspend functions for asynchronous operations
+suspend fun fetchUserData(userId: Int): String {
+    println("Fetching data for user $userId... (takes 1s)")
+    delay(1000)
+    return "User data for $userId"
+}
+suspend fun fetchUserPosts(userId: Int): List<String> {
+    println("Fetching posts for user $userId... (takes 1.5s)")
+    delay(1500)
+    return listOf("Post 1 for $userId", "Post 2 for $userId")
+}
+
+suspend fun demonstrateCoroutines() = coroutineScope {
+    println("\n-- Coroutines: Launch (Fire-and-forget) --")
+    launch {
+        println("Started fire-and-forget job.")
+        delay(500)
+        println("Fire-and-forget job finished.")
+    }
+
+    println("\n-- Coroutines: Async/Await (Parallel decomposition) --")
+    val startTime = System.currentTimeMillis()
+    val userDataDeferred = async(Dispatchers.IO) { fetchUserData(101) }
+    val userPostsDeferred = async(Dispatchers.IO) { fetchUserPosts(101) }
+
+    val userData = userDataDeferred.await()
+    val userPosts = userPostsDeferred.await()
+    val endTime = System.currentTimeMillis()
+
+    println("Received data: $userData")
+    println("Received posts: ${userPosts.joinToString()}")
+    // Should take ~1.5s, not 2.5s, due to parallel execution
+    println("Parallel execution took ${endTime - startTime} ms")
+}
+
+// 7.2 A Flow that emits numbers asynchronously
+fun numberFlow(): Flow<Int> = flow {
+    for (i in 1..5) {
+        delay(300)
+        println("Flow: Emitting $i")
+        emit(i)
+    }
+}
+
+suspend fun demonstrateFlows() {
+    println("\n-- Asynchronous Flow --")
+    try {
+        withTimeout(2000) {
+            numberFlow().collect { value -> println("Flow: Collected $value") }
+        }
+    } catch (e: TimeoutCancellationException) {
+        println("Flow collection timed out, as expected.")
+    }
+
+    println("\n-- Flow Operators --")
+    (1..10).asFlow()
+        .filter { it % 2 == 0 }
+        .map { "Processed item: $it" }
+        .collect { println(it) }
+}
+
+// 7.3 Channels for communication between coroutines
+suspend fun demonstrateChannels() = coroutineScope {
+    println("\n-- Channels --")
+    val channel = Channel<Int>(Channel.RENDEZVOUS) // No buffer
+
+    launch { // Producer coroutine
+        for (x in 1..5) {
+            println("Channel: Sending ${x * x}")
+            channel.send(x * x)
+        }
+        channel.close()
+    }
+
+    for (y in channel) { // Consumer
+        println("Channel: Received $y")
+        delay(200)
+    }
+    println("Channel closed, done receiving.")
+}
+
+// =================================================================
+// SECTION 8: METAPROGRAMMING
+// =================================================================
+
+// 8.1 Custom annotation
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class ExperimentalFeature(val description: String)
+
+@ExperimentalFeature("This class is a work in progress")
+class InProgressClass {
+    val id: Int = 1
+    fun doSomething() {}
+}
+
+// 8.2 Using reflection to inspect a class at runtime
+fun inspectClass(kClass: KClass<*>) {
+    println("\n-- Inspecting class: ${kClass.simpleName} --")
+    println("  - Qualified name: ${kClass.qualifiedName}")
+    println("  - Is data class? ${kClass.isData}")
+    println("  - Is companion? ${kClass.isCompanion}")
+    println("  - Annotations:")
+    kClass.annotations.forEach { println("    - $it") }
+    println("  - Properties:")
+    kClass.memberProperties.forEach { prop -> println("    - ${prop.name}: ${prop.returnType}") }
+}
+
+fun demonstrateMetaprogramming() {
+    println("\n--- Metaprogramming Showcase ---")
+    inspectClass(User::class)
+    inspectClass(InProgressClass::class)
+    inspectClass(Secret.Factory::class)
+}
+
+// =================================================================
+// SECTION 9: EXPERIMENTAL & ADVANCED FEATURES
+// =================================================================
+
+// 9.1 Contracts for smarter static analysis
+@OptIn(ExperimentalContracts::class)
+fun requireIsNotNull(value: Any?, name: String) {
+    contract {
+        returns() implies (value != null)
+    }
+    if (value == null) throw IllegalArgumentException("'$name' must not be null")
+}
+
+fun testContract(text: String?) {
+    requireIsNotNull(text, "text")
+    // The compiler now smart-casts 'text' to non-nullable String here.
+    println("Contract passed, text length is: ${text.length}")
+}
+
+// 9.2 Context Receivers (hypothetical logger example)
+interface Logger {
+    fun log(message: String)
+}
+class ConsoleLogger(private val prefix: String) : Logger {
+    override fun log(message: String) = println("[$prefix] ${LocalDateTime.now()}: $message")
+}
+
+// `context(Logger)` means any function call inside `performAction`
+// has a `Logger` instance available in its scope.
+context(Logger)
+fun performAction(actionName: String) {
+    log("Starting action: $actionName")
+    // ... do some work ...
+    Thread.sleep(50)
+    log("Finished action: $actionName")
+}
+
+fun demonstrateExperimentalFeatures() {
+    println("\n--- Experimental Features Showcase ---")
+
+    println("-- Contracts --")
+    testContract("Hello Contracts")
+    try {
+        testContract(null)
+    } catch (e: IllegalArgumentException) {
+        println("Caught expected exception from contract: ${e.message}")
+    }
+
+    println("\n-- Context Receivers --")
+    val logger = ConsoleLogger("DEMO")
+    // Provide the context for the function call
+    with(logger) {
+        performAction("File Download")
+        performAction("Data Processing")
+    }
+}

@@ -1,0 +1,933 @@
+--[[
+  Lua Code Variety Showcase
+  Target: 1000 lines of code for LLM importance matrix dataset.
+  This file covers a wide range of Lua features.
+]]
+
+-- ===================================================================
+-- Section 1: Basic Syntax, Variables, and Control Flow
+-- ===================================================================
+
+-- 1.1: Global and Local Variables
+print("--- Section 1: Basics ---")
+
+global_variable = "I am accessible everywhere" -- Avoid this in practice
+local local_variable = 123
+local another_local = "Hello, Lua!"
+
+-- 1.2: Data Types
+local a_nil = nil
+local a_boolean = true
+local a_number_int = 42
+local a_number_float = 3.14159
+local a_string = "This is a string."
+local a_long_string = [[
+This is a multi-line string.
+It can contain "quotes" and 'apostrophes' without escaping.
+The newlines are preserved.
+]]
+
+-- 1.3: Simple Operations
+local sum = a_number_int + 10
+local product = a_number_float * 2
+local concatenation = a_string .. " " .. "And this is more."
+local is_equal = (sum == 52)
+local is_not_equal = (product ~= 6.0)
+
+print(global_variable)
+print("Local number:", local_variable)
+print("Concatenated string:", concatenation)
+print("Is sum 52?", is_equal)
+
+-- 1.4: Conditional Statements (if/then/elseif/else)
+local temperature = 25
+if temperature > 30 then
+    print("It's hot outside.")
+elseif temperature > 20 and temperature <= 30 then
+    print("The weather is pleasant.")
+elseif temperature > 10 then
+    print("It's a bit chilly.")
+else
+    print("It's cold.")
+end
+
+-- 1.5: Loops
+-- Numeric for loop
+local factorial_result = 1
+for i = 1, 10, 1 do
+    factorial_result = factorial_result * i
+end
+print("Factorial of 10 is", factorial_result)
+
+-- While loop
+local countdown = 5
+while countdown > 0 do
+    print("T-minus", countdown)
+    countdown = countdown - 1
+end
+print("Blast off!")
+
+-- Repeat-until loop
+local password_attempt = ""
+local attempts = 0
+repeat
+    -- In a real scenario, this would be user input
+    attempts = attempts + 1
+    password_attempt = "password123"
+    print("Attempt " .. attempts .. ": Trying password...")
+until password_attempt == "password123" or attempts > 3
+print("Login successful.")
+
+-- ===================================================================
+-- Section 2: Tables - Lua's All-Purpose Data Structure
+-- ===================================================================
+print("\n--- Section 2: Tables ---")
+
+-- 2.1: Tables as Arrays (integer keys)
+local fruits = { "apple", "banana", "orange", "grape" }
+print("First fruit:", fruits[1]) -- Lua arrays are 1-indexed
+print("Number of fruits:", #fruits)
+
+-- Iterate over an array-like table
+for i, fruit in ipairs(fruits) do
+    print("Fruit " .. i .. ": " .. fruit)
+end
+
+-- 2.2: Tables as Dictionaries (hash maps)
+local person = {
+    name = "John Doe",
+    age = 30,
+    is_employed = true,
+    ["home address"] = "123 Main St" -- Keys with spaces need brackets
+}
+print(person.name .. " is " .. person.age .. " years old.")
+print("Home address:", person["home address"])
+
+-- Iterate over a dictionary-like table
+for key, value in pairs(person) do
+    print(key .. ": " .. tostring(value))
+end
+
+-- 2.3: Mixed and Nested Tables
+local company = {
+    name = "Innovative Tech Inc.",
+    year_founded = 2010,
+    departments = { "Engineering", "Marketing", "HR" },
+    employees = {
+        { name = "Alice", role = "Lead Engineer", id = 101 },
+        { name = "Bob", role = "Marketing Manager", id = 202 }
+    }
+}
+
+print("Company:", company.name)
+print("First department:", company.departments[1])
+print("First employee's role:", company.employees[1].role)
+
+-- 2.4: Table manipulation
+table.insert(fruits, "mango") -- Add to the end
+table.insert(fruits, 1, "strawberry") -- Add to the beginning
+print("Fruits after insertion:", table.concat(fruits, ", "))
+
+table.remove(fruits, 3) -- Remove "banana"
+print("Fruits after removal:", table.concat(fruits, ", "))
+
+-- Sorting (in-place)
+table.sort(fruits)
+print("Sorted fruits:", table.concat(fruits, ", "))
+
+-- ===================================================================
+-- Section 3: Functions - First-Class Citizens
+-- ===================================================================
+print("\n--- Section 3: Functions ---")
+
+-- 3.1: Named Functions
+function calculate_area(width, height)
+    if not width or not height then
+        return nil, "Width and height must be provided."
+    end
+    return width * height
+end
+
+local area, err = calculate_area(10, 5)
+if area then
+    print("Area is:", area)
+end
+
+-- 3.2: Multiple Return Values
+function get_user_profile()
+    -- Simulated data fetch
+    return "jdoe", "jdoe@example.com", 12345
+end
+
+local username, email, user_id = get_user_profile()
+print("User:", username, "Email:", email, "ID:", user_id)
+
+-- 3.3: Anonymous Functions (Lambdas)
+local numbers = { 1, 2, 3, 4, 5 }
+local doubled_numbers = {}
+for _, num in ipairs(numbers) do
+    table.insert(doubled_numbers, (function(x) return x * 2 end)(num))
+end
+print("Doubled numbers:", table.concat(doubled_numbers, ", "))
+
+-- 3.4: Higher-Order Functions
+function map(tbl, func)
+    local new_tbl = {}
+    for i, v in ipairs(tbl) do
+        new_tbl[i] = func(v)
+    end
+    return new_tbl
+end
+
+local squared_numbers = map(numbers, function(x) return x * x end)
+print("Squared numbers:", table.concat(squared_numbers, ", "))
+
+-- 3.5: Closures and Lexical Scoping
+function create_counter(initial_value)
+    local count = initial_value or 0
+    return function()
+        count = count + 1
+        return count
+    end
+end
+
+local counter1 = create_counter()
+print(counter1()) -- 1
+print(counter1()) -- 2
+
+local counter2 = create_counter(100)
+print(counter2()) -- 101
+print(counter1()) -- 3 (counter1's state is independent)
+
+-- 3.6: Variadic Functions (...)
+function sum_all(...)
+    local args = { ... }
+    local total = 0
+    for _, v in ipairs(args) do
+        total = total + v
+    end
+    return total
+end
+print("Sum of 1,1,2,3,5 is:", sum_all(1, 1, 2, 3, 5))
+
+function log_message(level, ...)
+    local message_parts = { ... }
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    print(timestamp .. " [" .. string.upper(level) .. "] " .. table.concat(message_parts, " "))
+end
+log_message("info", "User", username, "logged in successfully.")
+
+-- ===================================================================
+-- Section 4: Metaprogramming with Metatables
+-- ===================================================================
+print("\n--- Section 4: Metatables ---")
+
+-- 4.1: The __index metamethod (for read access)
+local default_values = { x = 0, y = 0, z = 0 }
+local Vector = {}
+Vector.mt = { __index = default_values }
+
+function Vector.new(t)
+    local new_vec = t or {}
+    setmetatable(new_vec, Vector.mt)
+    return new_vec
+end
+
+local v1 = Vector.new({ x = 10 })
+print("v1.x:", v1.x) -- 10 (from table)
+print("v1.y:", v1.y) -- 0 (from metatable's __index table)
+
+-- 4.2: The __newindex metamethod (for write access)
+local read_only_mt = {
+    __index = function(t, k) return rawget(t, k) end,
+    __newindex = function(t, k, v)
+        error("Attempt to modify a read-only table for key: " .. k, 2)
+    end
+}
+
+local config = { host = "localhost", port = 8080 }
+setmetatable(config, read_only_mt)
+print("Config host:", config.host)
+-- The following line would cause an error:
+-- config.port = 9000
+
+-- 4.3: Operator Overloading
+local Set = {}
+Set.mt = {
+    -- Overload '+' for set union
+    __add = function(set1, set2)
+        local union = Set.new()
+        for k in pairs(set1) do union[k] = true end
+        for k in pairs(set2) do union[k] = true end
+        return union
+    end,
+    -- Overload '*' for set intersection
+    __mul = function(set1, set2)
+        local intersection = Set.new()
+        for k in pairs(set1) do
+            if set2[k] then
+                intersection[k] = true
+            end
+        end
+        return intersection
+    end,
+    -- A nice string representation
+    __tostring = function(set)
+        local elements = {}
+        for k in pairs(set) do
+            table.insert(elements, tostring(k))
+        end
+        return "{ " .. table.concat(elements, ", ") .. " }"
+    end
+}
+
+function Set.new(initial_list)
+    local new_set = {}
+    if initial_list then
+        for _, v in ipairs(initial_list) do
+            new_set[v] = true
+        end
+    end
+    setmetatable(new_set, Set.mt)
+    return new_set
+end
+
+local s1 = Set.new({ "a", "b", "c" })
+local s2 = Set.new({ "b", "c", "d" })
+
+print("Set 1:", tostring(s1))
+print("Set 2:", tostring(s2))
+
+local s_union = s1 + s2
+print("Union (s1 + s2):", tostring(s_union))
+
+local s_intersection = s1 * s2
+print("Intersection (s1 * s2):", tostring(s_intersection))
+
+-- 4.4: The __call metamethod (making tables callable)
+local Polynomial = {}
+Polynomial.mt = {
+    __call = function(poly_table, x)
+        local result = 0
+        -- poly_table is {c, b, a} for ax^2 + bx + c
+        for i, coeff in ipairs(poly_table) do
+            result = result + coeff * (x ^ (i - 1))
+        end
+        return result
+    end
+}
+
+-- Represents 2x^2 + 3x + 5
+local my_poly = { 5, 3, 2 }
+setmetatable(my_poly, Polynomial.mt)
+
+print("Polynomial 2x^2+3x+5 at x=2 is", my_poly(2)) -- 5 + 3*2 + 2*4 = 19
+print("Polynomial 2x^2+3x+5 at x=3 is", my_poly(3)) -- 5 + 3*3 + 2*9 = 32
+
+
+-- 4.5: Weak Tables for Caching (__mode)
+local cache = {}
+setmetatable(cache, { __mode = "v" }) -- "v" for weak values
+
+function get_large_object(id)
+    if cache[id] then
+        return cache[id]
+    else
+        local new_obj = { data = string.rep(tostring(id), 1000), id = id }
+        cache[id] = new_obj
+        return new_obj
+    end
+end
+
+local obj1 = get_large_object(1)
+local obj2 = get_large_object(2)
+-- Now, if all other references to obj1 are lost, the garbage collector
+-- is free to remove it from the cache.
+obj1 = nil
+collectgarbage("collect") -- Force a GC cycle
+log_message("debug", "After GC, cache may have cleared an entry.")
+
+
+-- ===================================================================
+-- Section 5: Object-Oriented Programming Patterns
+-- ===================================================================
+print("\n--- Section 5: OOP ---")
+
+-- 5.1: Prototypal "Class" implementation
+local Animal = {}
+Animal.__index = Animal -- The metatable's index points to the class table itself
+
+function Animal:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    return o
+end
+
+function Animal:speak()
+    print(self.sound or "...")
+end
+
+-- 5.2: Inheritance
+local Dog = Animal:new() -- Dog is an instance of Animal, but we'll use it as a class
+Dog.sound = "Woof!"
+
+function Dog:new(name)
+    local new_dog = {}
+    new_dog.name = name
+    -- We set the metatable to Dog, which inherits from Animal
+    setmetatable(new_dog, self)
+    self.__index = self
+    return new_dog
+end
+
+function Dog:fetch()
+    print(self.name .. " is fetching a stick.")
+end
+
+local my_pet = Dog:new("Rex")
+my_pet:speak() -- Inherited from Animal, but uses Dog's `sound` property
+my_pet:fetch()
+
+-- 5.3: A slightly different, more "classical" style
+local Shape = {}
+
+function Shape.new(self, x, y)
+    local instance = { x = x or 0, y = y or 0 }
+    self.__index = self
+    setmetatable(instance, self)
+    return instance
+end
+
+function Shape:move(dx, dy)
+    self.x = self.x + dx
+    self.y = self.y + dy
+end
+
+function Shape:__tostring()
+    return string.format("Shape at (%d, %d)", self.x, self.y)
+end
+
+local Circle = {}
+setmetatable(Circle, { __index = Shape }) -- Inheritance
+
+function Circle.new(self, x, y, radius)
+    local instance = Shape.new(self, x, y)
+    instance.radius = radius or 1
+    -- Re-set the metatable to Circle
+    setmetatable(instance, self)
+    return instance
+end
+
+function Circle:area()
+    return math.pi * self.radius ^ 2
+end
+
+function Circle:__tostring()
+    return string.format("Circle of radius %d at (%d, %d)", self.radius, self.x, self.y)
+end
+
+local my_shape = Shape:new(10, 20)
+local my_circle = Circle:new(30, 40, 5)
+
+print(tostring(my_shape))
+my_shape:move(5, -5)
+print("After move:", tostring(my_shape))
+
+print(tostring(my_circle))
+my_circle:move(-10, 0)
+print("After move:", tostring(my_circle))
+print("Circle area:", my_circle:area())
+
+-- ===================================================================
+-- Section 6: Standard Library Showcase
+-- ===================================================================
+print("\n--- Section 6: Standard Libraries ---")
+
+-- 6.1: String library
+local text = "Lua is a powerful, efficient, lightweight, embeddable scripting language."
+
+-- string.find and string.sub
+local start_pos, end_pos = string.find(text, "lightweight")
+if start_pos then
+    print("Found 'lightweight':", string.sub(text, start_pos, end_pos))
+end
+
+-- string.gsub (global substitution)
+local new_text, num_replacements = string.gsub(text, "a", "4")
+print("Replaced 'a' with '4' (" .. num_replacements .. " times):", new_text)
+
+-- string.gmatch (iterator)
+print("Words ending in 't':")
+for word in string.gmatch(text, "%a+t%f[%w]") do
+    print(" - " .. word)
+end
+
+-- string.format
+local formatted_string = string.format("User: %s (ID: %04d)", username, user_id)
+print(formatted_string)
+
+-- 6.2: Math library
+math.randomseed(os.time())
+local random_number = math.random(1, 100)
+print("Random number between 1 and 100:", random_number)
+
+local angle = math.pi / 4 -- 45 degrees
+print(string.format("sin(45) = %.4f, cos(45) = %.4f", math.sin(angle), math.cos(angle)))
+print("Ceiling of 9.1 is", math.ceil(9.1))
+print("Floor of 9.9 is", math.floor(9.9))
+
+-- 6.3: OS library
+print("Current time:", os.time())
+print("Current date:", os.date("%A, %B %d, %Y"))
+local start_time = os.clock()
+-- Simulate work
+local temp = 0
+for i = 1, 1000000 do temp = temp + i end
+local end_time = os.clock()
+print(string.format("Time taken for loop: %.4f seconds", end_time - start_time))
+
+local path_var = os.getenv("PATH")
+-- print("PATH environment variable:", path_var) -- Commented out for cleaner output
+
+-- 6.4: IO library (use with care)
+local file_name = "lua_test_output.txt"
+local file, io_err = io.open(file_name, "w")
+if file then
+    file:write("This is a test file written by a Lua script.\n")
+    file:write(string.format("Timestamp: %s\n", os.date()))
+    file:close()
+    print("Successfully wrote to", file_name)
+else
+    print("Error opening file for writing:", io_err)
+end
+
+local read_file, read_err = io.open(file_name, "r")
+if read_file then
+    print("\nReading from file:")
+    for line in read_file:lines() do
+        -- string.gsub to remove newline characters for clean printing
+        print("> " .. string.gsub(line, "[\r\n]", ""))
+    end
+    read_file:close()
+    os.remove(file_name) -- Clean up
+else
+    print("Error opening file for reading:", read_err)
+end
+
+
+-- ===================================================================
+-- Section 7: Modules and Environments
+-- ===================================================================
+print("\n--- Section 7: Modules and Environments ---")
+
+-- 7.1: Creating a simple module
+-- In a real scenario, this would be in its own file `utils.lua`
+local my_module_code = [[
+  local M = {} -- The module table
+
+  local PI = 3.14159265
+
+  function M.circumference(radius)
+    return 2 * PI * radius
+  end
+
+  function M.is_even(n)
+    return n % 2 == 0
+  end
+
+  return M
+]]
+
+-- Simulate `require` by using `load`
+local MyUtils = assert(load(my_module_code))()
+print("Circumference of a circle with radius 10:", MyUtils.circumference(10))
+print("Is 7 even?", MyUtils.is_even(7))
+
+
+-- 7.2: Working with the environment
+-- _G is the global environment table
+_G.my_global_function = function()
+    print("This function was added to the global scope!")
+end
+my_global_function()
+
+-- Sandboxing with _ENV (Lua 5.2+)
+-- Create a new, restricted environment
+local sandbox_env = {
+    print = print, -- Allow printing
+    math = { pow = math.pow }, -- Only allow math.pow
+    message = "Hello from the sandbox!"
+}
+
+local untrusted_code = [[
+  print(message)
+  local result = math.pow(2, 8)
+  print("2^8 is", result)
+  -- The following would error, as 'os' is not in the environment
+  -- print(os.time())
+]]
+
+local sandboxed_function, load_err = load(untrusted_code, "sandboxed_chunk", "t", sandbox_env)
+if sandboxed_function then
+    sandboxed_function()
+else
+    print("Error loading sandboxed code:", load_err)
+end
+
+-- ===================================================================
+-- Section 8: Coroutines for Cooperative Multitasking
+-- ===================================================================
+print("\n--- Section 8: Coroutines ---")
+
+local function producer()
+    local items = {"data1", "data2", "data3"}
+    for i, item in ipairs(items) do
+        print("Producer: generating", item)
+        coroutine.yield(item) -- Yield control back to consumer
+    end
+    return "done"
+end
+
+local co = coroutine.create(producer)
+print("Coroutine status:", coroutine.status(co))
+
+while coroutine.status(co) ~= "dead" do
+    print("Consumer: resuming coroutine...")
+    local success, value = coroutine.resume(co)
+    if success and value then
+        print("Consumer: received", value)
+    elseif not success then
+        print("Coroutine error:", value)
+        break
+    end
+    print("Coroutine status:", coroutine.status(co))
+end
+
+
+-- Another example: an infinite sequence generator
+local function fibonacci_generator()
+    local a, b = 0, 1
+    while true do
+        coroutine.yield(a)
+        a, b = b, a + b
+    end
+end
+
+local fib_co = coroutine.create(fibonacci_generator)
+print("\nFirst 10 Fibonacci numbers:")
+for i = 1, 10 do
+    local _, num = coroutine.resume(fib_co)
+    io.write(num .. " ")
+end
+print()
+
+
+-- ===================================================================
+-- Section 9: Error Handling
+-- ===================================================================
+print("\n--- Section 9: Error Handling ---")
+
+-- 9.1: pcall (Protected Call)
+function might_fail(should_fail)
+    if should_fail then
+        error("This function was designed to fail.", 2)
+    end
+    return "Success!"
+end
+
+local status, result = pcall(might_fail, false)
+print(string.format("Call 1: Status=%s, Result=%s", tostring(status), tostring(result)))
+
+status, result = pcall(might_fail, true)
+print(string.format("Call 2: Status=%s, Result=%s", tostring(status), tostring(result)))
+
+
+-- 9.2: xpcall (Protected Call with Error Handler)
+local function error_handler(err_msg)
+    local debug_info = debug.traceback("Error occurred", 2)
+    return "Caught an error!\n" .. tostring(err_msg) .. "\n" .. debug_info
+end
+
+status, result = xpcall(might_fail, error_handler, true)
+print(string.format("xpcall: Status=%s\nResult:\n%s", tostring(status), tostring(result)))
+
+
+-- 9.3: assert
+local function divide(a, b)
+    assert(type(a) == "number", "Numerator must be a number.")
+    assert(type(b) == "number", "Denominator must be a number.")
+    assert(b ~= 0, "Cannot divide by zero.")
+    return a / b
+end
+
+print("10 / 2 =", divide(10, 2))
+-- The following line would raise an error with the message "Cannot divide by zero."
+-- local fail_div = pcall(divide, 10, 0)
+
+
+-- ===================================================================
+-- Section 10: LuaJIT FFI (Foreign Function Interface)
+-- ===================================================================
+print("\n--- Section 10: LuaJIT FFI ---")
+-- NOTE: This section will only work if run with LuaJIT.
+-- It demonstrates interaction with C libraries.
+
+if jit then
+    print("LuaJIT detected. Running FFI examples.")
+    local ffi = require("ffi")
+
+    -- 10.1: Define a C function prototype (from libc)
+    ffi.cdef[[
+        // Standard C library functions
+        int printf(const char *format, ...);
+        int system(const char *command);
+        double sin(double x);
+
+        // Define a C struct
+        typedef struct {
+            int x;
+            int y;
+        } Point;
+    ]]
+
+    -- 10.2: Call a C function
+    ffi.C.printf("Hello from C's printf via LuaJIT FFI! Value: %d\n", 42)
+
+    -- Example of calling system command (be careful with this)
+    -- ffi.C.system("echo 'This is a system command from Lua'")
+
+    -- 10.3: Use C-level data types
+    local c_sin_result = ffi.C.sin(math.pi / 2)
+    print("C sin(pi/2) result:", c_sin_result)
+
+    -- 10.4: Create and use a C struct
+    local point_type = ffi.typeof("Point")
+    local my_point = point_type(10, 20) -- Create an instance
+
+    print(string.format("C struct Point: x=%d, y=%d", my_point.x, my_point.y))
+
+    -- Manipulate C data directly
+    my_point.x = my_point.x + 5
+    print(string.format("Updated C struct Point: x=%d, y=%d", my_point.x, my_point.y))
+
+    -- Create a C array
+    local c_array = ffi.new("int[5]", {11, 22, 33, 44, 55})
+    for i = 0, 4 do -- C arrays are 0-indexed
+        io.write(string.format("c_array[%d] = %d; ", i, c_array[i]))
+    end
+    print()
+else
+    print("Not running on LuaJIT. Skipping FFI section.")
+end
+
+
+-- ===================================================================
+-- Section 11: A Larger Example - Mini Text Adventure Game
+-- This section combines many concepts: tables, functions, loops, etc.
+-- ===================================================================
+print("\n--- Section 11: Mini Text Adventure Game ---")
+
+local Game = {}
+Game.player = {
+    location = "start",
+    inventory = {},
+    health = 100,
+}
+
+Game.rooms = {
+    start = {
+        description = "You are in a dimly lit starting room. There is a wooden door to the north.",
+        exits = { north = "hallway" }
+    },
+    hallway = {
+        description = "You are in a long hallway. A door is to the south. To the east, you see a small kitchen. A key is on the floor.",
+        exits = { south = "start", east = "kitchen" },
+        items = { key = { description = "a rusty old key" } }
+    },
+    kitchen = {
+        description = "You are in a small kitchen. There's a locked cabinet on the wall. A hallway is to the west.",
+        exits = { west = "hallway" },
+        features = {
+            cabinet = {
+                description = "A sturdy wooden cabinet. It seems to be locked.",
+                locked = true,
+                key = "key",
+                contents = { potion = { description = "a glowing health potion" } }
+            }
+        }
+    }
+}
+
+function Game:describe_location()
+    local current_room = self.rooms[self.player.location]
+    print("\n--------------------------------")
+    print(current_room.description)
+    if current_room.items and next(current_room.items) ~= nil then
+        print("You see:")
+        for item_name, item_data in pairs(current_room.items) do
+            print("- " .. item_data.description)
+        end
+    end
+    print("Exits are:", table.concat(self:get_exit_names(), ", "))
+end
+
+function Game:get_exit_names()
+    local current_room = self.rooms[self.player.location]
+    local exit_names = {}
+    if current_room.exits then
+        for direction, _ in pairs(current_room.exits) do
+            table.insert(exit_names, direction)
+        end
+    end
+    return exit_names
+end
+
+function Game:has_item(item_name)
+    for _, item in ipairs(self.player.inventory) do
+        if item == item_name then return true end
+    end
+    return false
+end
+
+Game.commands = {
+    go = function(self, direction)
+        local current_room = self.rooms[self.player.location]
+        if current_room.exits and current_room.exits[direction] then
+            self.player.location = current_room.exits[direction]
+            print("You go " .. direction .. ".")
+            return true
+        else
+            print("You can't go that way.")
+            return false
+        end
+    end,
+    get = function(self, item_name)
+        local current_room = self.rooms[self.player.location]
+        if current_room.items and current_room.items[item_name] then
+            print("You take the " .. item_name .. ".")
+            table.insert(self.player.inventory, item_name)
+            current_room.items[item_name] = nil
+        else
+            print("You don't see a " .. item_name .. " here.")
+        end
+    end,
+    inventory = function(self)
+        if #self.player.inventory == 0 then
+            print("Your inventory is empty.")
+        else
+            print("You are carrying: " .. table.concat(self.player.inventory, ", "))
+        end
+    end,
+    look = function(self)
+        -- Handled by the main loop
+        return true
+    end,
+    unlock = function(self, feature_name)
+        local current_room = self.rooms[self.player.location]
+        local feature = current_room.features and current_room.features[feature_name]
+        if feature then
+            if feature.locked then
+                if self:has_item(feature.key) then
+                    feature.locked = false
+                    print("You unlock the " .. feature_name .. " with the " .. feature.key .. ".")
+                else
+                    print("You don't have the key for the " .. feature_name .. ".")
+                end
+            else
+                print("The " .. feature_name .. " is already unlocked.")
+            end
+        else
+            print("You don't see a '" .. feature_name .. "' to unlock.")
+        end
+    end,
+    open = function(self, feature_name)
+        local current_room = self.rooms[self.player.location]
+        local feature = current_room.features and current_room.features[feature_name]
+        if feature then
+            if not feature.locked then
+                print("You open the " .. feature_name .. ".")
+                if feature.contents and next(feature.contents) ~= nil then
+                    print("Inside, you find:")
+                    for item_name, item_data in pairs(feature.contents) do
+                        print("- " .. item_data.description)
+                        -- Move items from feature to room
+                        current_room.items = current_room.items or {}
+                        current_room.items[item_name] = item_data
+                    end
+                    feature.contents = {} -- Empty it
+                else
+                    print("It's empty.")
+                end
+            else
+                print("The " .. feature_name .. " is locked.")
+            end
+        else
+            print("You don't see a '" .. feature_name .. "' to open.")
+        end
+    end,
+    help = function()
+        print("Available commands: go, get, inventory, look, unlock, open, quit, help")
+    end,
+    quit = function()
+        print("Goodbye!")
+        -- In a real game, this would set a flag to exit the main loop.
+    end
+}
+
+function Game:process_command(input)
+    local command, param = string.match(input, "(%w+)%s*(.*)")
+    command = string.lower(command or "")
+    param = string.lower(param or "")
+
+    if self.commands[command] then
+        local success = self.commands[command](self, param)
+        return success -- Return true if a screen refresh is needed
+    else
+        print("I don't understand that command. Type 'help' for a list of commands.")
+        return false
+    end
+end
+
+-- A simple game loop simulation
+local function run_game_simulation()
+    local game_instance = Game
+    local simulated_inputs = {
+        "look",
+        "go north",
+        "look",
+        "get key",
+        "inventory",
+        "go east",
+        "unlock cabinet", -- This will fail
+        "go west",
+        "go east",
+        "unlock cabinet", -- This should still fail, param is needed
+        "unlock", -- also fails
+        "unlock cabinet", -- now it works
+        "open cabinet",
+        "look",
+        "get potion",
+        "quit"
+    }
+
+    print("Starting game simulation...")
+    game_instance:describe_location()
+
+    for _, input in ipairs(simulated_inputs) do
+        print("\n> " .. input)
+        if input == "quit" then
+            game_instance.commands.quit()
+            break
+        end
+        local needs_redraw = game_instance:process_command(input)
+        if needs_redraw or input == "look" or string.match(input, "^go") then
+            game_instance:describe_location()
+        end
+    end
+    print("\nGame simulation finished.")
+end
+
+-- Run the simulation
+run_game_simulation()
+
+print("\n--- End of Lua Showcase Script (1000+ lines) ---")

@@ -1,0 +1,1078 @@
+-- SQL Code Generation for LLM Importance Matrix Dataset
+-- Language: SQL
+-- Dialect: Primarily PostgreSQL, with comments for T-SQL (SQL Server) and MySQL where applicable.
+-- Total Lines: 1000+
+
+-- =================================================================================
+-- Section 1: DDL - Data Definition Language (Setup, Schemas, Roles)
+-- =================================================================================
+
+-- Line 1: Basic database creation
+CREATE DATABASE cyber_corp_db;
+
+-- Note: In many clients, you would connect to the new database after creation.
+-- \c cyber_corp_db
+
+-- Line 5: Creating schemas for organization
+CREATE SCHEMA IF NOT EXISTS sales;
+CREATE SCHEMA IF NOT EXISTS human_resources;
+CREATE SCHEMA IF NOT EXISTS analytics;
+CREATE SCHEMA IF NOT EXISTS production;
+
+-- Line 10: User and Role Management (DCL - Data Control Language)
+CREATE ROLE data_analyst;
+CREATE ROLE sales_rep;
+CREATE USER data_scientist WITH PASSWORD 'secure_password_123';
+
+-- Line 15: Granting privileges on schemas
+GRANT USAGE ON SCHEMA sales TO sales_rep;
+GRANT USAGE ON SCHEMA analytics TO data_analyst;
+GRANT ALL PRIVILEGES ON SCHEMA analytics TO data_scientist;
+
+-- Line 20: Granting table-level privileges (tables will be created later)
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA sales TO sales_rep;
+GRANT SELECT ON ALL TABLES IN SCHEMA sales TO data_analyst;
+GRANT SELECT ON ALL TABLES IN SCHEMA human_resources TO data_analyst;
+
+-- Line 25: Revoking a privilege
+REVOKE UPDATE ON ALL TABLES IN SCHEMA sales FROM data_analyst; -- Assuming it was granted before
+
+-- =================================================================================
+-- Section 2: DDL - Advanced Types, Domains, Sequences, and Tables
+-- =================================================================================
+
+-- Line 30: Creating a custom domain for email validation
+CREATE DOMAIN common.email_address AS VARCHAR(255)
+CHECK (
+    VALUE ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'
+);
+
+-- Line 36: Creating a custom ENUM type (PostgreSQL specific)
+CREATE TYPE human_resources.employment_status AS ENUM (
+    'Full-Time',
+    'Part-Time',
+    'Contractor',
+    'Intern'
+);
+
+-- Line 43: Creating a custom composite type (PostgreSQL specific)
+CREATE TYPE common.geolocation AS (
+    latitude  DECIMAL(9, 6),
+    longitude DECIMAL(9, 6)
+);
+
+-- Line 49: Creating a sequence for custom IDs
+CREATE SEQUENCE common.customer_id_seq
+    START WITH 1000
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+-- Line 56: Table for employees (human_resources schema)
+CREATE TABLE human_resources.employees (
+    employee_id         SERIAL PRIMARY KEY, -- Auto-incrementing integer
+    first_name          VARCHAR(50) NOT NULL,
+    last_name           VARCHAR(50) NOT NULL,
+    email               common.email_address UNIQUE,
+    phone_number        VARCHAR(20),
+    hire_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+    job_title           VARCHAR(100),
+    salary              NUMERIC(10, 2) CHECK (salary > 0),
+    manager_id          INTEGER REFERENCES human_resources.employees(employee_id),
+    status              human_resources.employment_status,
+    -- T-SQL equivalent for SERIAL: employee_id INT IDENTITY(1,1) PRIMARY KEY
+    -- MySQL equivalent for SERIAL: employee_id INT AUTO_INCREMENT PRIMARY KEY
+    CONSTRAINT chk_name CHECK (first_name <> last_name)
+);
+
+-- Line 74: Table for products (production schema)
+CREATE TABLE production.products (
+    product_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Using UUID for primary key
+    product_name        VARCHAR(255) NOT NULL UNIQUE,
+    description         TEXT,
+    category_id         INT, -- Foreign key will be added later
+    unit_price          DECIMAL(10, 2) NOT NULL,
+    units_in_stock      SMALLINT DEFAULT 0,
+    is_discontinued     BOOLEAN DEFAULT FALSE,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    metadata            JSONB -- Storing flexible metadata
+);
+
+-- Line 86: Table for product categories
+CREATE TABLE production.categories (
+    category_id         SERIAL PRIMARY KEY,
+    category_name       VARCHAR(100) NOT NULL,
+    parent_category_id  INTEGER REFERENCES production.categories(category_id)
+);
+
+-- Line 92: Adding a foreign key with ALTER TABLE
+ALTER TABLE production.products
+    ADD CONSTRAINT fk_category
+    FOREIGN KEY (category_id)
+    REFERENCES production.categories(category_id)
+    ON DELETE SET NULL; -- If a category is deleted, set product's category to NULL
+
+-- Line 99: Table for customers (sales schema)
+CREATE TABLE sales.customers (
+    customer_id         INT PRIMARY KEY DEFAULT nextval('common.customer_id_seq'),
+    company_name        VARCHAR(100) NOT NULL,
+    contact_name        VARCHAR(100),
+    address             VARCHAR(255),
+    city                VARCHAR(100),
+    region              VARCHAR(50),
+    postal_code         VARCHAR(20),
+    country             VARCHAR(50),
+    location            common.geolocation, -- Using the composite type
+    tags                TEXT[] -- Using an array type (PostgreSQL specific)
+);
+
+-- Line 112: Table for orders (sales schema)
+CREATE TABLE sales.orders (
+    order_id            SERIAL PRIMARY KEY,
+    customer_id         INT NOT NULL,
+    employee_id         INT,
+    order_date          TIMESTAMP WITH TIME ZONE NOT NULL,
+    shipped_date        TIMESTAMP WITH TIME ZONE,
+    freight             MONEY, -- MONEY data type
+    ship_via            INT,
+    ship_address        VARCHAR(255),
+    FOREIGN KEY (customer_id) REFERENCES sales.customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (employee_id) REFERENCES human_resources.employees(employee_id) ON DELETE SET NULL
+);
+
+-- Line 125: Junction table for many-to-many relationship between orders and products
+CREATE TABLE sales.order_details (
+    order_id            INT REFERENCES sales.orders(order_id),
+    product_id          UUID REFERENCES production.products(product_id),
+    unit_price          DECIMAL(10, 2) NOT NULL,
+    quantity            SMALLINT NOT NULL,
+    discount            REAL CHECK (discount >= 0 AND discount <= 1), -- REAL for floating point
+    PRIMARY KEY (order_id, product_id)
+);
+
+-- Line 134: Adding an index for performance
+CREATE INDEX idx_products_category_id ON production.products (category_id);
+CREATE INDEX idx_customers_country_city ON sales.customers (country, city);
+-- Creating a GIN index for JSONB data
+CREATE INDEX idx_products_metadata ON production.products USING GIN (metadata);
+-- Creating a GiST index for arrays
+CREATE INDEX idx_customers_tags ON sales.customers USING GIN (tags);
+
+-- Line 142: Creating a view
+CREATE VIEW analytics.quarterly_sales_summary AS
+SELECT
+    EXTRACT(YEAR FROM o.order_date) AS sales_year,
+    EXTRACT(QUARTER FROM o.order_date) AS sales_quarter,
+    p.product_name,
+    SUM(od.quantity * od.unit_price * (1 - od.discount)) AS total_revenue
+FROM sales.orders o
+JOIN sales.order_details od ON o.order_id = od.order_id
+JOIN production.products p ON od.product_id = p.product_id
+GROUP BY sales_year, sales_quarter, p.product_name;
+
+-- Line 154: Creating a materialized view for more complex, pre-computed analytics
+CREATE MATERIALIZED VIEW analytics.customer_lifetime_value AS
+SELECT
+    c.customer_id,
+    c.company_name,
+    COUNT(DISTINCT o.order_id) AS number_of_orders,
+    SUM(od.quantity * od.unit_price) AS total_spent,
+    MIN(o.order_date) AS first_order_date,
+    MAX(o.order_date) AS last_order_date
+FROM sales.customers c
+JOIN sales.orders o ON c.customer_id = o.customer_id
+JOIN sales.order_details od ON o.order_id = od.order_id
+GROUP BY c.customer_id, c.company_name;
+
+-- Line 168: Refreshing a materialized view
+REFRESH MATERIALIZED VIEW analytics.customer_lifetime_value;
+
+-- Line 171: Altering a table to add a new column
+ALTER TABLE human_resources.employees
+ADD COLUMN performance_rating NUMERIC(2,1) DEFAULT 3.0;
+
+-- Line 175: Altering a table to drop a column
+ALTER TABLE sales.customers
+DROP COLUMN region;
+
+-- Line 179: Altering a table to change a data type
+ALTER TABLE sales.customers
+ALTER COLUMN postal_code TYPE VARCHAR(30);
+
+-- Line 183: Renaming a table
+ALTER TABLE human_resources.employees RENAME TO human_resources.personnel;
+-- Revert for consistency
+ALTER TABLE human_resources.personnel RENAME TO human_resources.employees;
+
+-- Line 188: Truncating a table (fast delete, no triggers)
+-- TRUNCATE TABLE sales.order_details RESTART IDENTITY CASCADE; -- commented out to preserve data
+
+-- Line 191: Creating a temporary table
+CREATE TEMP TABLE temp_customer_import (
+    import_id SERIAL,
+    customer_data JSON
+);
+
+-- Line 196: Dropping an index
+DROP INDEX IF EXISTS idx_customers_country_city;
+
+-- Line 199: Dropping a view
+DROP VIEW IF EXISTS analytics.quarterly_sales_summary;
+
+-- =================================================================================
+-- Section 3: DML - Data Manipulation Language (Inserting Data)
+-- =================================================================================
+
+-- Line 205: Inserting data into categories (self-referencing FK)
+INSERT INTO production.categories (category_name, parent_category_id) VALUES
+('Electronics', NULL),
+('Computers', 1),
+('Peripherals', 1),
+('Laptops', 2),
+('Monitors', 3);
+
+-- Line 213: Inserting data into products with JSONB and returning a value
+INSERT INTO production.products (product_name, category_id, unit_price, units_in_stock, metadata) VALUES
+('QuantumBook Pro 15"', 4, 2499.99, 50, '{"brand": "CyberCorp", "specs": {"cpu": "QuantumCore i9", "ram_gb": 32, "storage_tb": 1}}'),
+('PhotonDisplay 27"', 5, 599.50, 120, '{"brand": "CyberCorp", "specs": {"resolution": "4K", "refresh_rate_hz": 144}}'),
+('DataStream Mouse', 3, 79.99, 300, '{"brand": "Logicorp", "specs": {"dpi": 16000, "wireless": true}}')
+RETURNING product_id, product_name;
+
+-- Line 220: Inserting data for employees
+INSERT INTO human_resources.employees (first_name, last_name, email, job_title, salary, status) VALUES
+('Alice', 'Wonder', 'alice.w@cybercorp.com', 'CEO', 250000.00, 'Full-Time'),
+('Bob', 'Builder', 'bob.b@cybercorp.com', 'Lead Engineer', 150000.00, 'Full-Time'),
+('Charlie', 'Chocolate', 'charlie.c@cybercorp.com', 'Sales Director', 180000.00, 'Full-Time');
+
+-- Line 226: Update manager_id for employees
+UPDATE human_resources.employees SET manager_id = 1 WHERE employee_id IN (2, 3);
+
+-- Line 229: Inserting multiple customers in a single statement
+INSERT INTO sales.customers (company_name, contact_name, address, city, country, location, tags) VALUES
+('Innovate Inc.', 'John Smith', '123 Innovation Dr', 'Techville', 'USA', ROW(34.0522, -118.2437), ARRAY['enterprise', 'B2B']),
+('Global Exports', 'Maria Garcia', '456 Global Way', 'London', 'UK', ROW(51.5074, -0.1278), ARRAY['logistics', 'international']),
+('Future Systems', 'Kenji Tanaka', '789 Future Blvd', 'Tokyo', 'Japan', ROW(35.6895, 139.6917), ARRAY['B2C', 'retail']);
+
+-- Line 235: Inserting orders
+INSERT INTO sales.orders (customer_id, employee_id, order_date) VALUES
+(1000, 2, '2023-01-15 10:30:00-05'),
+(1002, 3, '2023-01-17 14:00:00+09'),
+(1000, 2, '2023-02-20 11:00:00-05');
+
+-- Line 241: Inserting into order_details (using a subquery to get product_id)
+INSERT INTO sales.order_details (order_id, product_id, unit_price, quantity, discount) VALUES
+(1, (SELECT product_id FROM production.products WHERE product_name = 'QuantumBook Pro 15"'), 2499.99, 2, 0.05),
+(1, (SELECT product_id FROM production.products WHERE product_name = 'DataStream Mouse'), 79.99, 2, 0.05),
+(2, (SELECT product_id FROM production.products WHERE product_name = 'PhotonDisplay 27"'), 599.50, 10, 0.1),
+(3, (SELECT product_id FROM production.products WHERE product_name = 'QuantumBook Pro 15"'), 2399.99, 5, 0.1);
+
+-- Line 248: Using `INSERT ... ON CONFLICT` (UPSERT) - PostgreSQL specific
+INSERT INTO production.categories (category_id, category_name) VALUES (1, 'All Electronics')
+ON CONFLICT (category_id) DO UPDATE SET category_name = EXCLUDED.category_name;
+-- MySQL equivalent: INSERT ... ON DUPLICATE KEY UPDATE category_name = VALUES(category_name);
+-- T-SQL equivalent: MERGE statement
+
+-- Line 254: MERGE statement example (ANSI SQL / T-SQL)
+/*
+MERGE production.categories AS target
+USING (VALUES (1, 'Electronics', NULL)) AS source (category_id, category_name, parent_category_id)
+ON target.category_id = source.category_id
+WHEN MATCHED THEN
+    UPDATE SET category_name = source.category_name
+WHEN NOT MATCHED THEN
+    INSERT (category_id, category_name, parent_category_id)
+    VALUES (source.category_id, source.category_name, source.parent_category_id);
+*/
+
+-- Line 266: Updating data
+UPDATE human_resources.employees
+SET salary = salary * 1.05
+WHERE job_title LIKE '%Engineer%';
+
+-- Line 270: Updating with a join (PostgreSQL syntax)
+UPDATE production.products
+SET units_in_stock = units_in_stock - 10
+FROM sales.order_details
+WHERE products.product_id = order_details.product_id AND order_details.order_id = 2;
+
+-- Line 276: Deleting data
+DELETE FROM sales.orders WHERE order_id = 4; -- Assuming an order with ID 4 exists and should be deleted
+
+-- =================================================================================
+-- Section 4: DQL - Basic Data Query Language
+-- =================================================================================
+
+-- Line 282: Select all columns from a table
+SELECT * FROM human_resources.employees;
+
+-- Line 285: Select specific columns with aliases
+SELECT
+    product_name AS "Product Name",
+    unit_price,
+    units_in_stock AS "Stock"
+FROM production.products;
+
+-- Line 291: Filtering with WHERE clause and various operators
+SELECT * FROM production.products
+WHERE unit_price > 1000.00 AND units_in_stock > 0;
+
+-- Line 295: Using LIKE and ILIKE (case-insensitive)
+SELECT first_name, last_name FROM human_resources.employees
+WHERE last_name ILIKE 'w%';
+
+-- Line 299: Using BETWEEN
+SELECT order_id, order_date FROM sales.orders
+WHERE order_date BETWEEN '2023-01-01' AND '2023-01-31';
+
+-- Line 303: Using IN and NOT IN
+SELECT * FROM sales.customers
+WHERE country IN ('USA', 'UK');
+
+-- Line 307: Checking for NULL values
+SELECT * FROM human_resources.employees
+WHERE manager_id IS NULL;
+
+-- Line 311: Ordering results
+SELECT product_name, unit_price FROM production.products
+ORDER BY unit_price DESC;
+
+-- Line 315: Ordering by multiple columns
+SELECT country, city, company_name FROM sales.customers
+ORDER BY country ASC, city ASC;
+
+-- Line 319: Handling NULLs in ordering
+SELECT product_name, category_id FROM production.products
+ORDER BY category_id ASC NULLS FIRST;
+
+-- Line 323: Limiting results (for pagination)
+SELECT * FROM sales.orders
+ORDER BY order_date DESC
+LIMIT 10;
+
+-- Line 328: Pagination with OFFSET
+SELECT * FROM sales.customers
+ORDER BY company_name
+LIMIT 20 OFFSET 40; -- Get records 41-60
+
+-- Line 333: ANSI SQL standard for pagination
+SELECT * FROM sales.orders
+ORDER BY order_date
+FETCH FIRST 5 ROWS ONLY;
+
+-- Line 338: Selecting distinct values
+SELECT DISTINCT country FROM sales.customers;
+
+-- Line 341: Arithmetic operations in SELECT
+SELECT
+    product_name,
+    unit_price,
+    units_in_stock,
+    (unit_price * units_in_stock) AS total_stock_value
+FROM production.products;
+
+-- Line 348: String manipulation
+SELECT
+    first_name,
+    last_name,
+    UPPER(first_name) || ' ' || UPPER(last_name) AS full_name -- PostgreSQL/Oracle concat
+    -- CONCAT(UPPER(first_name), ' ', UPPER(last_name)) AS full_name -- Standard/MySQL/T-SQL
+FROM human_resources.employees;
+
+-- Line 355: Date and time functions
+SELECT
+    order_date,
+    DATE_PART('year', order_date) AS order_year,
+    NOW() - order_date AS age_of_order
+FROM sales.orders;
+
+-- =================================================================================
+-- Section 5: DQL - Intermediate (Joins, Aggregates, Grouping)
+-- =================================================================================
+
+-- Line 364: INNER JOIN
+SELECT
+    o.order_id,
+    o.order_date,
+    c.company_name
+FROM sales.orders AS o
+INNER JOIN sales.customers c ON o.customer_id = c.customer_id;
+
+-- Line 371: LEFT JOIN (to find customers who have never ordered)
+SELECT
+    c.company_name,
+    o.order_id
+FROM sales.customers c
+LEFT JOIN sales.orders o ON c.customer_id = o.customer_id
+WHERE o.order_id IS NULL;
+
+-- Line 378: Multi-table JOIN
+SELECT
+    p.product_name,
+    c.category_name,
+    od.quantity,
+    od.unit_price
+FROM sales.order_details od
+JOIN production.products p ON od.product_id = p.product_id
+JOIN production.categories c ON p.category_id = c.category_id
+WHERE od.order_id = 1;
+
+-- Line 388: SELF JOIN (to find employees and their managers)
+SELECT
+    e.first_name || ' ' || e.last_name AS employee,
+    m.first_name || ' ' || m.last_name AS manager
+FROM human_resources.employees e
+LEFT JOIN human_resources.employees m ON e.manager_id = m.employee_id;
+
+-- Line 395: FULL OUTER JOIN
+SELECT
+    p.product_name,
+    od.order_id
+FROM production.products p
+FULL OUTER JOIN sales.order_details od ON p.product_id = od.product_id
+WHERE p.product_name LIKE 'Data%' OR od.quantity > 5;
+
+-- Line 403: CROSS JOIN (Cartesian product - use with caution)
+SELECT
+    c.company_name,
+    p.product_name
+FROM sales.customers c
+CROSS JOIN production.products p
+WHERE c.country = 'USA' AND p.category_id = 4;
+
+-- Line 411: NATURAL JOIN (less common, relies on matching column names)
+-- SELECT * FROM sales.orders NATURAL JOIN sales.customers;
+
+-- Line 414: Basic aggregation
+SELECT COUNT(*) AS total_customers FROM sales.customers;
+SELECT AVG(salary) AS average_salary FROM human_resources.employees;
+SELECT SUM(od.quantity * od.unit_price) AS total_revenue FROM sales.order_details od;
+
+-- Line 419: GROUP BY
+SELECT
+    c.country,
+    COUNT(c.customer_id) AS number_of_customers
+FROM sales.customers c
+GROUP BY c.country
+ORDER BY number_of_customers DESC;
+
+-- Line 426: GROUP BY multiple columns
+SELECT
+    p.category_id,
+    c.category_name,
+    AVG(p.unit_price) as average_price
+FROM production.products p
+JOIN production.categories c ON p.category_id = c.category_id
+GROUP BY p.category_id, c.category_name;
+
+-- Line 434: Using HAVING to filter grouped results
+SELECT
+    e.job_title,
+    COUNT(e.employee_id) AS number_of_employees
+FROM human_resources.employees e
+GROUP BY e.job_title
+HAVING COUNT(e.employee_id) > 0;
+
+-- Line 442: Complex aggregation with joins and filtering
+SELECT
+    c.company_name,
+    SUM(od.quantity * od.unit_price * (1-od.discount)) AS total_spent
+FROM sales.customers c
+JOIN sales.orders o ON c.customer_id = o.customer_id
+JOIN sales.order_details od ON o.order_id = od.order_id
+WHERE o.order_date > '2023-01-01'
+GROUP BY c.company_name
+HAVING SUM(od.quantity * od.unit_price * (1-od.discount)) > 1000
+ORDER BY total_spent DESC;
+
+-- Line 453: Using different aggregate functions
+SELECT
+    p.category_id,
+    MIN(p.unit_price) AS cheapest_product,
+    MAX(p.unit_price) AS most_expensive_product,
+    STRING_AGG(p.product_name, ', ') AS product_list -- PostgreSQL/SQL Server
+FROM production.products p
+GROUP BY p.category_id;
+
+-- Line 462: Set operators - UNION
+(SELECT company_name, city, country FROM sales.customers WHERE country = 'USA')
+UNION
+(SELECT company_name, city, country FROM sales.customers WHERE country = 'UK');
+
+-- Line 467: Set operators - UNION ALL (includes duplicates)
+(SELECT country FROM sales.customers)
+UNION ALL
+(SELECT country FROM sales.customers);
+
+-- Line 472: Set operators - INTERSECT
+(SELECT customer_id FROM sales.orders WHERE order_date > '2023-02-01')
+INTERSECT
+(SELECT customer_id FROM sales.customers WHERE country = 'USA');
+
+-- Line 477: Set operators - EXCEPT
+(SELECT product_id FROM production.products)
+EXCEPT
+(SELECT DISTINCT product_id FROM sales.order_details);
+
+-- =================================================================================
+-- Section 6: DQL - Advanced (Subqueries, CTEs, Window Functions)
+-- =================================================================================
+
+-- Line 485: Subquery in the WHERE clause
+SELECT product_name, unit_price
+FROM production.products
+WHERE unit_price > (SELECT AVG(unit_price) FROM production.products);
+
+-- Line 490: Subquery with IN
+SELECT company_name
+FROM sales.customers
+WHERE customer_id IN (SELECT customer_id FROM sales.orders WHERE freight > 100);
+
+-- Line 495: Correlated subquery
+SELECT
+    e.first_name,
+    e.salary
+FROM human_resources.employees e
+WHERE e.salary = (
+    SELECT MAX(salary)
+    FROM human_resources.employees e2
+    WHERE e2.job_title = e.job_title
+);
+
+-- Line 505: Subquery in the FROM clause (Derived Table)
+SELECT
+    avg_order_value.company_name,
+    avg_order_value.average_value
+FROM (
+    SELECT
+        c.company_name,
+        AVG(od.quantity * od.unit_price) as average_value
+    FROM sales.customers c
+    JOIN sales.orders o ON c.customer_id = o.customer_id
+    JOIN sales.order_details od ON o.order_id = od.order_id
+    GROUP BY c.company_name
+) AS avg_order_value
+WHERE avg_order_value.average_value > 5000;
+
+-- Line 520: Subquery in the SELECT clause (Scalar Subquery)
+SELECT
+    company_name,
+    (SELECT COUNT(*) FROM sales.orders o WHERE o.customer_id = c.customer_id) AS total_orders
+FROM sales.customers c;
+
+-- Line 526: Common Table Expression (CTE)
+WITH RegionalSales AS (
+    SELECT
+        c.country,
+        p.category_id,
+        SUM(od.quantity * od.unit_price) AS total_sales
+    FROM sales.customers c
+    JOIN sales.orders o ON c.customer_id = o.customer_id
+    JOIN sales.order_details od ON o.order_id = od.order_id
+    JOIN production.products p ON od.product_id = p.product_id
+    GROUP BY c.country, p.category_id
+)
+SELECT
+    rs.country,
+    cat.category_name,
+    rs.total_sales
+FROM RegionalSales rs
+JOIN production.categories cat ON rs.category_id = cat.category_id
+ORDER BY rs.country, rs.total_sales DESC;
+
+-- Line 545: Recursive CTE (for hierarchical data like categories)
+WITH RECURSIVE CategoryHierarchy AS (
+    -- Anchor member
+    SELECT
+        category_id,
+        category_name,
+        parent_category_id,
+        0 AS level,
+        CAST(category_name AS TEXT) AS path
+    FROM production.categories
+    WHERE parent_category_id IS NULL
+
+    UNION ALL
+
+    -- Recursive member
+    SELECT
+        c.category_id,
+        c.category_name,
+        c.parent_category_id,
+        ch.level + 1,
+        ch.path || ' -> ' || c.category_name
+    FROM production.categories c
+    INNER JOIN CategoryHierarchy ch ON c.parent_category_id = ch.category_id
+)
+SELECT * FROM CategoryHierarchy ORDER BY path;
+
+-- Line 571: Window Function - ROW_NUMBER()
+SELECT
+    product_name,
+    category_id,
+    unit_price,
+    ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY unit_price DESC) as price_rank_in_category
+FROM production.products;
+
+-- Line 579: Window Function - RANK() and DENSE_RANK()
+SELECT
+    first_name,
+    salary,
+    RANK() OVER (ORDER BY salary DESC) as salary_rank,
+    DENSE_RANK() OVER (ORDER BY salary DESC) as salary_dense_rank
+FROM human_resources.employees;
+
+-- Line 587: Window Function - NTILE()
+SELECT
+    product_name,
+    unit_price,
+    NTILE(4) OVER (ORDER BY unit_price DESC) as price_quartile
+FROM production.products;
+
+-- Line 594: Window Function - LAG() and LEAD()
+WITH MonthlySales AS (
+    SELECT
+        DATE_TRUNC('month', order_date)::DATE as sales_month,
+        SUM(od.quantity * od.unit_price) as monthly_revenue
+    FROM sales.orders o
+    JOIN sales.order_details od ON o.order_id = od.order_id
+    GROUP BY sales_month
+)
+SELECT
+    sales_month,
+    monthly_revenue,
+    LAG(monthly_revenue, 1, 0) OVER (ORDER BY sales_month) as previous_month_revenue,
+    LEAD(monthly_revenue, 1, 0) OVER (ORDER BY sales_month) as next_month_revenue,
+    monthly_revenue - LAG(monthly_revenue, 1, 0) OVER (ORDER BY sales_month) AS month_over_month_change
+FROM MonthlySales;
+
+-- Line 612: Window Function with Aggregates (Running Total)
+SELECT
+    order_id,
+    order_date,
+    customer_id,
+    (SELECT SUM(unit_price*quantity) FROM sales.order_details od WHERE od.order_id = o.order_id) as order_total,
+    SUM((SELECT SUM(unit_price*quantity) FROM sales.order_details od WHERE od.order_id = o.order_id)) OVER (PARTITION BY customer_id ORDER BY order_date) as running_total_per_customer
+FROM sales.orders o;
+
+-- Line 621: PIVOT data using CASE (standard SQL)
+SELECT
+    c.country,
+    SUM(CASE WHEN EXTRACT(YEAR FROM o.order_date) = 2023 THEN od.quantity * od.unit_price ELSE 0 END) AS sales_2023,
+    SUM(CASE WHEN EXTRACT(YEAR FROM o.order_date) = 2024 THEN od.quantity * od.unit_price ELSE 0 END) AS sales_2024
+FROM sales.customers c
+JOIN sales.orders o ON c.customer_id = o.customer_id
+JOIN sales.order_details od ON o.order_id = od.order_id
+GROUP BY c.country;
+
+-- Line 631: PIVOT in T-SQL (example commented out)
+/*
+SELECT Country, [2023], [2024]
+FROM
+(
+    SELECT c.Country, YEAR(o.OrderDate) as OrderYear, od.Quantity * od.UnitPrice as Sale
+    FROM Customers c JOIN Orders o ON c.CustomerID = o.CustomerID
+    JOIN OrderDetails od ON o.OrderID = od.OrderID
+) AS SourceTable
+PIVOT
+(
+    SUM(Sale)
+    FOR OrderYear IN ([2023], [2024])
+) AS PivotTable;
+*/
+
+-- =================================================================================
+-- Section 7: JSON, XML, Full-Text Search
+-- =================================================================================
+
+-- Line 651: Querying JSONB data (PostgreSQL)
+SELECT
+    product_name,
+    metadata ->> 'brand' AS brand,
+    metadata -> 'specs' ->> 'cpu' AS cpu_model
+FROM production.products
+WHERE metadata @> '{"brand": "CyberCorp"}'; -- JSON contains this key-value pair
+
+-- Line 659: Filtering on a nested JSONB value
+SELECT product_name
+FROM production.products
+WHERE (metadata -> 'specs' ->> 'ram_gb')::INT > 16;
+
+-- Line 664: Aggregating JSON data
+SELECT
+    metadata ->> 'brand' AS brand,
+    COUNT(*) as num_products,
+    jsonb_agg(product_name) as products
+FROM production.products
+WHERE metadata ->> 'brand' IS NOT NULL
+GROUP BY brand;
+
+-- Line 672: XML Data Type example (PostgreSQL)
+ALTER TABLE sales.orders ADD COLUMN order_notes XML;
+UPDATE sales.orders
+SET order_notes = xmlparse(content '<notes><note priority="high">Customer requested gift wrap.</note></notes>')
+WHERE order_id = 1;
+
+-- Line 678: Querying XML with XPath
+SELECT
+    order_id,
+    xpath('/notes/note/text()', order_notes) AS notes
+FROM sales.orders
+WHERE xmlexists('/notes/note[@priority="high"]' PASSING BY REF order_notes);
+
+-- Line 684: Full-Text Search Setup (PostgreSQL)
+ALTER TABLE production.products
+ADD COLUMN search_vector tsvector;
+
+UPDATE production.products
+SET search_vector = to_tsvector('english', product_name || ' ' || coalesce(description, ''));
+
+CREATE INDEX idx_products_search_vector ON production.products USING GIN(search_vector);
+
+-- Line 693: Performing a Full-Text Search query
+SELECT product_name, description
+FROM production.products
+WHERE search_vector @@ to_tsquery('english', 'laptop & pro'); -- find products with 'laptop' and 'pro'
+
+-- Line 697: FTS with phrase search
+SELECT product_name
+FROM production.products
+WHERE search_vector @@ phraseto_tsquery('english', 'Quantum Book');
+
+-- =================================================================================
+-- Section 8: Transactions, Stored Procedures, and Functions
+-- =================================================================================
+
+-- Line 704: Transaction Control Language (TCL)
+BEGIN; -- Or START TRANSACTION
+UPDATE human_resources.employees SET salary = salary - 1000 WHERE employee_id = 2;
+SAVEPOINT before_delete;
+DELETE FROM sales.orders WHERE order_id = 3;
+-- Let's assume this was a mistake
+ROLLBACK TO SAVEPOINT before_delete;
+COMMIT;
+
+-- Line 713: Stored Function to calculate total revenue for a customer
+CREATE OR REPLACE FUNCTION sales.get_customer_total_revenue(p_customer_id INT)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    total_revenue NUMERIC;
+BEGIN
+    SELECT SUM(od.quantity * od.unit_price)
+    INTO total_revenue
+    FROM sales.orders o
+    JOIN sales.order_details od ON o.order_id = od.order_id
+    WHERE o.customer_id = p_customer_id;
+
+    RETURN COALESCE(total_revenue, 0);
+END;
+$$;
+
+-- Line 731: Using the function
+SELECT company_name, sales.get_customer_total_revenue(customer_id)
+FROM sales.customers
+WHERE country = 'USA';
+
+-- Line 736: Stored Procedure to process a new order
+-- (PostgreSQL uses PROCEDURE for actions without a return value)
+CREATE OR REPLACE PROCEDURE sales.process_new_order(
+    p_customer_id INT,
+    p_employee_id INT,
+    p_product_ids UUID[],
+    p_quantities INT[]
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    new_order_id INT;
+    product_price NUMERIC;
+    i INT;
+BEGIN
+    -- Insert the new order
+    INSERT INTO sales.orders (customer_id, employee_id, order_date)
+    VALUES (p_customer_id, p_employee_id, NOW())
+    RETURNING order_id INTO new_order_id;
+
+    -- Loop through products and add to order_details
+    FOR i IN 1..array_upper(p_product_ids, 1) LOOP
+        -- Get the current product price
+        SELECT unit_price INTO product_price
+        FROM production.products
+        WHERE product_id = p_product_ids[i];
+
+        -- Insert into order_details
+        INSERT INTO sales.order_details (order_id, product_id, unit_price, quantity, discount)
+        VALUES (new_order_id, p_product_ids[i], product_price, p_quantities[i], 0);
+
+        -- Update stock
+        UPDATE production.products
+        SET units_in_stock = units_in_stock - p_quantities[i]
+        WHERE product_id = p_product_ids[i];
+    END LOOP;
+
+    -- Commit transaction implicitly at the end of procedure
+    -- Can be controlled with explicit transaction blocks if needed
+END;
+$$;
+
+-- Line 778: Calling the procedure
+-- CALL sales.process_new_order(...);
+
+-- Line 781: Function with OUT parameters
+CREATE OR REPLACE FUNCTION human_resources.get_employee_stats(
+    OUT total_employees BIGINT,
+    OUT average_salary NUMERIC
+)
+LANGUAGE sql
+AS $$
+    SELECT COUNT(*), AVG(salary) FROM human_resources.employees;
+$$;
+
+-- Line 790: Calling function with OUT parameters
+SELECT * FROM human_resources.get_employee_stats();
+
+-- =================================================================================
+-- Section 9: Triggers and Dynamic SQL
+-- =================================================================================
+
+-- Line 796: Audit trigger function to log changes
+CREATE TABLE common.audit_log (
+    log_id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    change_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    old_data JSONB,
+    new_data JSONB
+);
+
+-- Line 806: The trigger function itself
+CREATE OR REPLACE FUNCTION common.log_employee_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        INSERT INTO common.audit_log (table_name, operation, user_name, old_data)
+        VALUES (TG_TABLE_NAME, TG_OP, current_user, row_to_json(OLD));
+        RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO common.audit_log (table_name, operation, user_name, old_data, new_data)
+        VALUES (TG_TABLE_NAME, TG_OP, current_user, row_to_json(OLD), row_to_json(NEW));
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO common.audit_log (table_name, operation, user_name, new_data)
+        VALUES (TG_TABLE_NAME, TG_OP, current_user, row_to_json(NEW));
+        RETURN NEW;
+    END IF;
+    RETURN NULL; -- result is ignored since this is an AFTER trigger
+END;
+$$;
+
+-- Line 830: Attaching the trigger to the employees table
+CREATE TRIGGER employees_audit_trigger
+AFTER INSERT OR UPDATE OR DELETE ON human_resources.employees
+FOR EACH ROW EXECUTE FUNCTION common.log_employee_changes();
+
+-- Line 835: Testing the trigger
+UPDATE human_resources.employees SET salary = salary + 1 WHERE employee_id = 1;
+-- SELECT * FROM common.audit_log;
+
+-- Line 839: Dynamic SQL example (potentially unsafe if not handled correctly)
+CREATE OR REPLACE FUNCTION common.get_count_from_table(p_table_name TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    row_count BIGINT;
+BEGIN
+    -- WARNING: This is vulnerable to SQL injection if p_table_name is from user input.
+    -- A safe way uses format()
+    -- EXECUTE format('SELECT COUNT(*) FROM %I', p_table_name) INTO row_count;
+    EXECUTE 'SELECT COUNT(*) FROM ' || p_table_name INTO row_count;
+    RETURN row_count;
+END;
+$$;
+
+-- Line 855: Safer dynamic SQL using format()
+CREATE OR REPLACE FUNCTION common.search_table(
+    p_schema_name TEXT,
+    p_table_name TEXT,
+    p_search_column TEXT,
+    p_search_value TEXT
+)
+RETURNS SETOF JSON
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY EXECUTE format(
+        'SELECT row_to_json(t) FROM %I.%I AS t WHERE %I::text ILIKE %L',
+        p_schema_name,
+        p_table_name,
+        p_search_column,
+        '%' || p_search_value || '%'
+    );
+END;
+$$;
+
+-- Line 874: Using the safe dynamic SQL function
+SELECT * FROM common.search_table('sales', 'customers', 'company_name', 'global');
+
+-- =================================================================================
+-- Section 10: Miscellaneous, Unsafe Code, and Cleanup
+-- =================================================================================
+
+-- Line 880: Conditional logic with CASE
+SELECT
+    product_name,
+    unit_price,
+    CASE
+        WHEN unit_price > 1000 THEN 'Premium'
+        WHEN unit_price > 200 AND unit_price <= 1000 THEN 'Standard'
+        ELSE 'Economy'
+    END AS price_category
+FROM production.products;
+
+-- Line 890: Using COALESCE to handle NULLs
+SELECT
+    e.first_name,
+    COALESCE(m.first_name, 'No Manager') AS manager_name
+FROM human_resources.employees e
+LEFT JOIN human_resources.employees m ON e.manager_id = m.employee_id;
+
+-- Line 897: Using NULLIF to avoid division by zero
+SELECT
+    product_name,
+    unit_price / NULLIF(units_in_stock, 0) as price_per_unit_in_stock
+FROM production.products;
+
+-- Line 903: Disabling a trigger (potentially "unsafe" operation)
+ALTER TABLE human_resources.employees DISABLE TRIGGER employees_audit_trigger;
+
+-- Bulk update without logging
+UPDATE human_resources.employees SET salary = salary * 1.02;
+
+-- Re-enabling the trigger
+ALTER TABLE human_resources.employees ENABLE TRIGGER employees_audit_trigger;
+
+-- Line 912: Example of a potentially long-running query that could lock tables
+BEGIN;
+SELECT * FROM sales.orders FOR UPDATE;
+-- (some long operation here)
+COMMIT;
+
+-- Line 918: Unsafe dynamic SQL (SQL injection vulnerability example)
+-- Let's say user input is: 'some_table; DROP TABLE human_resources.employees; --'
+-- The function common.get_count_from_table('some_table; DROP TABLE human_resources.employees; --')
+-- would execute the DROP TABLE command.
+
+-- Line 924: Dropping constraints
+ALTER TABLE sales.order_details DROP CONSTRAINT order_details_order_id_fkey;
+
+-- Line 927: Adding it back
+ALTER TABLE sales.order_details
+ADD CONSTRAINT order_details_order_id_fkey
+FOREIGN KEY (order_id) REFERENCES sales.orders(order_id);
+
+-- Line 932: Using table inheritance (PostgreSQL specific)
+CREATE TABLE common.base_log (
+    log_id SERIAL PRIMARY KEY,
+    log_time TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE analytics.error_log (
+    error_message TEXT NOT NULL
+) INHERITS (common.base_log);
+
+INSERT INTO analytics.error_log (error_message) VALUES ('Failed to connect to external API.');
+
+SELECT * FROM common.base_log; -- This will also show entries from error_log
+
+-- Line 946: Using FILTER clause for aggregates (more readable than CASE)
+SELECT
+    COUNT(*) FILTER (WHERE unit_price > 1000) AS premium_products,
+    COUNT(*) FILTER (WHERE unit_price <= 200) AS economy_products
+FROM production.products;
+
+-- Line 952: Advanced array operations (PostgreSQL)
+SELECT
+    company_name,
+    tags
+FROM sales.customers
+WHERE 'enterprise' = ANY(tags); -- Check if 'enterprise' is in the array
+
+-- Line 958: Unnesting an array
+SELECT
+    c.company_name,
+    unnest(c.tags) AS tag
+FROM sales.customers c;
+
+-- Line 964: Geospatial query example (requires PostGIS extension)
+-- CREATE EXTENSION postgis;
+-- ALTER TABLE sales.customers ADD COLUMN geom geometry(Point, 4326);
+-- UPDATE sales.customers SET geom = ST_SetSRID(ST_MakePoint(location.longitude, location.latitude), 4326);
+-- Find customers within 500km of London
+-- SELECT company_name FROM sales.customers
+-- WHERE ST_DWithin(geom, ST_MakePoint(-0.1278, 51.5074)::geography, 500000);
+
+-- Line 973: Final cleanup operations
+-- These are destructive and should be used with care.
+
+DROP TABLE IF EXISTS temp_customer_import;
+DROP FUNCTION IF EXISTS sales.get_customer_total_revenue(p_customer_id INT);
+DROP PROCEDURE IF EXISTS sales.process_new_order(INT, INT, UUID[], INT[]);
+DROP VIEW IF EXISTS analytics.quarterly_sales_summary;
+DROP MATERIALIZED VIEW IF EXISTS analytics.customer_lifetime_value;
+DROP TYPE IF EXISTS common.geolocation; -- Will fail if in use
+DROP DOMAIN IF EXISTS common.email_address;
+DROP SCHEMA IF EXISTS analytics CASCADE;
+-- Line 983: Dropping a role/user
+DROP ROLE data_analyst;
+DROP USER data_scientist;
+
+-- Line 987: More DQL demonstrating bitwise operators
+-- CREATE TABLE system_flags (flag_id INT, flag_config INT);
+-- INSERT INTO system_flags VALUES (1, 7); -- 7 is 0111 in binary
+-- SELECT flag_id FROM system_flags WHERE (flag_config & 1) > 0; -- Has first bit set? (1, 3, 5, 7...)
+-- SELECT flag_id FROM system_flags WHERE (flag_config & 2) > 0; -- Has second bit set? (2, 3, 6, 7...)
+-- SELECT flag_id FROM system_flags WHERE (flag_config & 4) > 0; -- Has third bit set? (4, 5, 6, 7...)
+
+-- Line 996: `USING` clause for joins, a shorthand for ON
+SELECT order_id, company_name
+FROM sales.orders
+JOIN sales.customers USING (customer_id);
+
+-- Line 1000: Final complex query combining several features for a realistic analytics task
+WITH CustomerOrderStats AS (
+    -- CTE to get basic order stats per customer
+    SELECT
+        o.customer_id,
+        COUNT(o.order_id) as total_orders,
+        SUM(od.quantity * od.unit_price) as total_value
+    FROM sales.orders o
+    JOIN sales.order_details od ON o.order_id = od.order_id
+    GROUP BY o.customer_id
+),
+RankedCustomers AS (
+    -- CTE to rank customers by total value
+    SELECT
+        customer_id,
+        total_orders,
+        total_value,
+        NTILE(10) OVER (ORDER BY total_value DESC) as decile
+    FROM CustomerOrderStats
+)
+-- Final selection joining back to customer info for top decile customers
+SELECT
+    c.company_name,
+    c.country,
+    rc.total_orders,
+    rc.total_value,
+    rc.decile
+FROM RankedCustomers rc
+JOIN sales.customers c ON rc.customer_id = c.customer_id
+WHERE rc.decile = 1 -- Select only the top 10% of customers
+ORDER BY rc.total_value DESC;
+-- End of File

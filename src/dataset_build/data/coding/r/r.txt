@@ -1,0 +1,1004 @@
+# R Language Showcase: A 1000-Line Comprehensive Example
+# Author: AI Assistant
+# Date: 2023
+# Purpose: To provide a diverse and comprehensive R script for LLM training data.
+# This script covers data structures, control flow, functions, tidyverse,
+# statistical modeling, OOP, metaprogramming, and more.
+
+# ==============================================================================
+# SECTION 1: Package Loading and Basic Setup
+# ==============================================================================
+
+# Use suppressPackageStartupMessages to keep the console clean
+# The 'pacman' package helps manage package installation and loading.
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  tidyverse,  # A collection of R packages designed for data science
+  ggplot2,    # The premier data visualization package
+  dplyr,      # A grammar of data manipulation
+  tidyr,      # Tidy messy data
+  lubridate,  # Tools for working with dates and times
+  stringr,    # Consistent wrappers for common string operations
+  R6,         # Encapsulated object-oriented programming
+  parallel,   # Support for parallel computation
+  rlang,      # Tidyverse metaprogramming toolkit
+  knitr       # For dynamic report generation (we'll just use a function)
+)
+
+# Set some global options for the script execution
+options(scipen = 999) # Disables scientific notation for numbers
+options(dplyr.summarise.inform = FALSE) # Suppress dplyr summary messages
+
+# ==============================================================================
+# SECTION 2: Core Data Types and Variables
+# ==============================================================================
+
+# ---- 2.1 Atomic Vectors ----
+
+# Numeric vector
+ages <- c(25, 30, 22, 45, 50)
+heights <- c(175.5, 180.2, 165.1, 190.0, 172.7)
+
+# Integer vector (L suffix makes it an integer)
+product_ids <- 101L:110L
+
+# Character vector (strings)
+names <- c("Alice", "Bob", "Charlie", "David", "Eve")
+departments <- c("HR", "Engineering", "Engineering", "Sales", "HR")
+
+# Logical vector
+is_full_time <- c(TRUE, FALSE, TRUE, TRUE, FALSE)
+
+# Complex numbers
+complex_vector <- c(2+3i, 1-1i, 5i, 10)
+
+# The `typeof()` function checks the underlying type
+print(paste("Type of ages:", typeof(ages)))
+print(paste("Type of product_ids:", typeof(product_ids)))
+print(paste("Type of names:", typeof(names)))
+
+# ---- 2.2 Factors ----
+# Factors are used to represent categorical data.
+
+department_factor <- factor(departments)
+print("Original Department Factor:")
+print(department_factor)
+
+# Reordering factor levels
+department_factor_ordered <- factor(departments, levels = c("Sales", "HR", "Engineering", "Marketing"))
+print("Reordered Department Factor:")
+print(department_factor_ordered)
+print(levels(department_factor_ordered))
+
+# Ordered factors
+satisfaction_levels <- c("Low", "Medium", "High", "Medium", "High")
+satisfaction_factor <- factor(satisfaction_levels,
+                              order = TRUE,
+                              levels = c("Low", "Medium", "High"))
+
+print("Ordered Satisfaction Factor:")
+print(satisfaction_factor)
+print(satisfaction_factor[1] < satisfaction_factor[3]) # This is now a valid comparison
+
+# ==============================================================================
+# SECTION 3: Core Data Structures
+# ==============================================================================
+
+# ---- 3.1 Matrices ----
+# 2-dimensional, all elements of the same type.
+
+# Create a matrix from a vector
+matrix_data <- 1:12
+my_matrix <- matrix(matrix_data, nrow = 3, ncol = 4, byrow = TRUE)
+print("A 3x4 Matrix:")
+print(my_matrix)
+
+# Matrix with named dimensions
+rownames(my_matrix) <- c("RowA", "RowB", "RowC")
+colnames(my_matrix) <- c("Col1", "Col2", "Col3", "Col4")
+print("Matrix with named dimensions:")
+print(my_matrix)
+
+# Subsetting a matrix
+element_b2 <- my_matrix["RowB", "Col2"]
+print(paste("Element at RowB, Col2 is:", element_b2))
+row_c_data <- my_matrix["RowC", ]
+print("Data from RowC:")
+print(row_c_data)
+
+# Matrix arithmetic
+matrix_a <- matrix(1:4, nrow = 2)
+matrix_b <- matrix(5:8, nrow = 2)
+matrix_sum <- matrix_a + matrix_b
+matrix_product <- matrix_a %*% t(matrix_b) # Matrix multiplication requires transpose here for conformable arrays
+
+print("Matrix Sum (A+B):")
+print(matrix_sum)
+print("Matrix Product (A %*% t(B)):")
+print(matrix_product)
+
+
+# ---- 3.2 Arrays ----
+# Multi-dimensional version of a matrix.
+
+my_array <- array(1:24, dim = c(3, 4, 2)) # 3 rows, 4 columns, 2 "sheets"
+print("A 3x4x2 Array:")
+print(my_array)
+
+# Subsetting an array
+print("Slice of the array (2nd row, all columns, 1st sheet):")
+print(my_array[2, , 1])
+
+
+# ---- 3.3 Lists ----
+# Ordered collection of objects, where each object can be of a different type.
+
+employee_alice <- list(
+  name = "Alice",
+  age = 25,
+  is_manager = FALSE,
+  projects = c("Project Alpha", "Project Gamma"),
+  performance_scores = list(q1 = 9.2, q2 = 8.8, q3 = 9.5)
+)
+
+print("A list representing an employee:")
+print(employee_alice)
+
+# Accessing list elements
+print(paste("Alice's name:", employee_alice$name))
+print(paste("Alice's Q2 score:", employee_alice$performance_scores$q2))
+print(paste("Alice's second project:", employee_alice[["projects"]][2]))
+
+
+# ---- 3.4 Data Frames ----
+# A list of vectors of equal length. The primary data structure for tabular data.
+
+employee_data <- data.frame(
+  EmployeeID = 1:5,
+  Name = names,
+  Age = ages,
+  Department = department_factor,
+  isFullTime = is_full_time,
+  stringsAsFactors = FALSE # A good practice to avoid automatic factor conversion
+)
+
+print("An employee data frame:")
+print(employee_data)
+str(employee_data) # Structure of the data frame
+
+# Subsetting a data frame
+hr_employees <- employee_data[employee_data$Department == "HR", ]
+print("Subsetting for HR employees:")
+print(hr_employees)
+
+# Using the subset() function
+engineering_subset <- subset(employee_data, Department == "Engineering" & Age > 25)
+print("Subset using the subset() function:")
+print(engineering_subset)
+
+# Adding a new column
+employee_data$Salary <- c(60000, 95000, 80000, 120000, 55000)
+print("Data frame with a new 'Salary' column:")
+print(employee_data)
+
+# ==============================================================================
+# SECTION 4: Control Flow
+# ==============================================================================
+
+# ---- 4.1 Conditional Statements (if, else if, else) ----
+check_employee_age <- function(age) {
+  if (age < 18) {
+    result <- "Not of legal working age."
+  } else if (age >= 18 && age < 30) {
+    result <- "Young professional."
+  } else if (age >= 30 && age < 50) {
+    result <- "Experienced professional."
+  } else {
+    result <- "Senior professional."
+  }
+  return(result)
+}
+
+print(paste("Age 25:", check_employee_age(25)))
+print(paste("Age 55:", check_employee_age(55)))
+
+# The ifelse() function is a vectorized version
+age_categories <- ifelse(employee_data$Age < 30, "Under 30", "30 or Over")
+print("Vectorized ifelse for age categories:")
+print(age_categories)
+
+# ---- 4.2 For Loops ----
+# Looping over a sequence
+total_salary <- 0
+for (salary in employee_data$Salary) {
+  total_salary <- total_salary + salary
+}
+average_salary <- total_salary / length(employee_data$Salary)
+print(paste("Average salary calculated with a for loop:", average_salary))
+
+# Looping with an index
+for (i in 1:nrow(employee_data)) {
+  cat(sprintf("Employee %s works in %s.\n", employee_data$Name[i], employee_data$Department[i]))
+}
+
+# ---- 4.3 While Loops ----
+# Loop as long as a condition is true
+countdown <- 5
+while (countdown > 0) {
+  print(paste("Countdown:", countdown))
+  countdown <- countdown - 1
+}
+print("Liftoff!")
+
+# ---- 4.4 Repeat Loops with Break ----
+# Infinite loop that requires a 'break' statement
+server_connections <- 0
+repeat {
+  server_connections <- server_connections + 1
+  print(paste("Connection", server_connections, "established."))
+  if (server_connections >= 3) {
+    print("Max connections reached. Halting.")
+    break
+  }
+}
+
+# ---- 4.5 Next Statement ----
+# Skip to the next iteration of a loop
+print("Processing odd numbers from 1 to 10:")
+for (i in 1:10) {
+  if (i %% 2 == 0) {
+    next # Skip even numbers
+  }
+  print(i)
+}
+
+# ---- 4.6 Switch Statement ----
+# A clean way to handle multiple conditions
+get_department_head <- function(dept) {
+  head_name <- switch(dept,
+    "HR" = "Carol",
+    "Engineering" = "Frank",
+    "Sales" = "Grace",
+    "Unknown Department" # Default value
+  )
+  return(head_name)
+}
+print(paste("Head of Engineering is:", get_department_head("Engineering")))
+print(paste("Head of Marketing is:", get_department_head("Marketing")))
+
+
+# ==============================================================================
+# SECTION 5: Functions
+# ==============================================================================
+
+# ---- 5.1 Defining a Simple Function ----
+calculate_bmi <- function(weight_kg, height_m) {
+  # Calculate Body Mass Index
+  if (height_m <= 0) {
+    stop("Height must be a positive number.")
+  }
+  bmi <- weight_kg / (height_m^2)
+  return(bmi)
+}
+
+# Call the function
+bmi_value <- calculate_bmi(70, 1.75)
+print(paste("Calculated BMI:", round(bmi_value, 2)))
+
+
+# ---- 5.2 Function with Default Arguments ----
+generate_report <- function(data, title = "Default Report Title", author = "System") {
+  cat("\n--- Report Start ---\n")
+  cat(paste("Title:", title, "\n"))
+  cat(paste("Author:", author, "\n"))
+  cat(paste("Date:", Sys.Date(), "\n"))
+  cat("--- Data Summary ---\n")
+  print(summary(data))
+  cat("--- Report End ---\n\n")
+}
+
+generate_report(employee_data, title = "Employee Overview")
+generate_report(mtcars) # Using default arguments
+
+
+# ---- 5.3 Functions Returning Multiple Values (via a list) ----
+get_stats <- function(numeric_vector) {
+  if (!is.numeric(numeric_vector)) {
+    warning("Input is not numeric. Returning NA.")
+    return(list(mean = NA, std_dev = NA, median = NA))
+  }
+  
+  stats <- list(
+    mean = mean(numeric_vector, na.rm = TRUE),
+    std_dev = sd(numeric_vector, na.rm = TRUE),
+    median = median(numeric_vector, na.rm = TRUE),
+    count = length(numeric_vector)
+  )
+  return(stats)
+}
+
+age_statistics <- get_stats(employee_data$Age)
+print("Statistics for employee ages:")
+print(age_statistics)
+
+
+# ---- 5.4 Anonymous (Lambda) Functions ----
+# Often used within the 'apply' family of functions
+numbers_list <- list(a = 1:5, b = 10:15, c = 20:22)
+
+# Using a named function
+list_means_named <- lapply(numbers_list, mean)
+print("List means (named function):")
+print(list_means_named)
+
+# Using an anonymous function to get the second element of each vector
+list_second_elements <- lapply(numbers_list, function(x) {
+  if (length(x) >= 2) {
+    return(x[2])
+  } else {
+    return(NA)
+  }
+})
+print("Second element of each list item (anonymous function):")
+print(list_second_elements)
+
+
+# ---- 5.5 Higher-Order Functions (apply family) ----
+
+# apply(): Apply a function over the margins of an array or matrix
+# Get column means of a numeric matrix
+numeric_matrix <- as.matrix(mtcars[, 1:4])
+col_means <- apply(numeric_matrix, 2, mean) # 2 for columns, 1 for rows
+print("Column means using apply():")
+print(col_means)
+
+# lapply(): Apply a function to each element of a list, returns a list
+list_of_vectors <- list(vec1 = rnorm(10), vec2 = rnorm(20))
+vector_summaries <- lapply(list_of_vectors, summary)
+print("List of summaries using lapply():")
+print(vector_summaries)
+
+# sapply(): A user-friendly version of lapply that simplifies the result to a vector or matrix if possible
+vector_lengths <- sapply(list_of_vectors, length)
+print("Vector lengths using sapply():")
+print(vector_lengths) # Result is a named vector, not a list
+
+# tapply(): Apply a function to subsets of a vector
+# Calculate the mean salary by department
+mean_salary_by_dept <- tapply(employee_data$Salary, employee_data$Department, mean)
+print("Mean salary by department using tapply():")
+print(mean_salary_by_dept)
+
+# mapply(): Apply a function to multiple list or vector arguments
+# Element-wise sum of three vectors
+vec1 <- 1:4
+vec2 <- 5:8
+vec3 <- 9:12
+elementwise_sum <- mapply(sum, vec1, vec2, vec3)
+print("Element-wise sum using mapply():")
+print(elementwise_sum)
+
+# Reduce(): Cumulatively apply a function to a list
+numbers <- 1:5
+sum_with_reduce <- Reduce("+", numbers)
+print(paste("Sum of 1:5 using Reduce:", sum_with_reduce))
+
+# Filter(): Filter elements of a list or vector
+is_even <- function(x) x %% 2 == 0
+even_numbers <- Filter(is_even, 1:10)
+print("Even numbers from 1:10 using Filter():")
+print(even_numbers)
+
+
+# ==============================================================================
+# SECTION 6: Tidyverse - Data Manipulation with dplyr and tidyr
+# ==============================================================================
+
+# Create a more complex dataset for demonstration
+set.seed(42)
+sales_data <- tibble(
+  Date = seq(as.Date("2023-01-01"), by = "day", length.out = 100),
+  Region = sample(c("North", "South", "East", "West"), 100, replace = TRUE),
+  Product = sample(c("Widget", "Gadget", "Doohickey"), 100, replace = TRUE),
+  UnitsSold = sample(10:100, 100, replace = TRUE),
+  UnitPrice = case_when(
+    Product == "Widget" ~ 15.0,
+    Product == "Gadget" ~ 25.5,
+    Product == "Doohickey" ~ 8.75
+  )
+)
+
+print("Sample of the sales data tibble:")
+print(head(sales_data))
+
+
+# ---- 6.1 The Pipe Operator (%>%) ----
+# Chains operations together, making code more readable.
+
+# ---- 6.2 Core dplyr Verbs ----
+analysis_result <- sales_data %>%
+  # filter(): Keep rows that match a condition
+  filter(Region %in% c("North", "East")) %>%
+
+  # mutate(): Create new columns or transform existing ones
+  mutate(
+    Revenue = UnitsSold * UnitPrice,
+    Month = month(Date, label = TRUE)
+  ) %>%
+
+  # group_by(): Group data for summary operations
+  group_by(Region, Product, Month) %>%
+
+  # summarise(): Collapse groups into a single-row summary
+  summarise(
+    TotalRevenue = sum(Revenue),
+    AverageUnitsSold = mean(UnitsSold),
+    NumTransactions = n()
+  ) %>%
+
+  # arrange(): Reorder rows
+  arrange(Region, Month, desc(TotalRevenue)) %>%
+  
+  # ungroup(): It's good practice to ungroup after summarising
+  ungroup()
+
+print("Tidyverse analysis result:")
+print(analysis_result)
+
+
+# ---- 6.3 Joins with dplyr ----
+region_managers <- tibble(
+  Region = c("North", "South", "East", "West"),
+  Manager = c("Manager A", "Manager B", "Manager C", "Manager D")
+)
+
+sales_with_managers <- sales_data %>%
+  left_join(region_managers, by = "Region")
+
+print("Sales data after joining with region managers:")
+print(head(sales_with_managers))
+
+
+# ---- 6.4 Data Reshaping with tidyr ----
+
+# pivot_wider(): Make a "wide" table from "long" data
+wide_sales <- analysis_result %>%
+  select(Region, Product, TotalRevenue) %>%
+  group_by(Region, Product) %>%
+  summarise(TotalRevenue = sum(TotalRevenue)) %>%
+  pivot_wider(
+    names_from = Product,
+    values_from = TotalRevenue,
+    values_fill = 0 # Fill missing combinations with 0
+  )
+
+print("Pivoted wider sales data:")
+print(wide_sales)
+
+# pivot_longer(): Make a "long" table from "wide" data
+long_sales <- wide_sales %>%
+  pivot_longer(
+    cols = -Region, # Select all columns except Region
+    names_to = "Product",
+    values_to = "TotalRevenue"
+  )
+
+print("Pivoted longer sales data:")
+print(long_sales)
+
+
+# ==============================================================================
+# SECTION 7: Tidyverse - Data Visualization with ggplot2
+# ==============================================================================
+
+# Create a plot showing total revenue by product for each region.
+
+revenue_plot <- analysis_result %>%
+  ggplot(
+    # aes(): The aesthetic mappings (what variables go on what axes, colors, etc.)
+    aes(x = Product, y = TotalRevenue, fill = Region)
+  ) +
+  
+  # geom_col(): The geometric object to display (a column chart)
+  # position = "dodge" places bars next to each other
+  geom_col(position = "dodge", color = "black") + 
+
+  # facet_wrap(): Create subplots for each month
+  facet_wrap(~Month, scales = "free_y") +
+
+  # scale_...(): Modify the scales (axes, colors, etc.)
+  scale_fill_brewer(palette = "Set2", name = "Sales Region") +
+  scale_y_continuous(labels = scales::dollar_format()) +
+
+  # labs(): Add labels and titles
+  labs(
+    title = "Total Monthly Revenue by Product and Region",
+    subtitle = "Data from Q1 2023",
+    x = "Product Type",
+    y = "Total Revenue",
+    caption = "Source: Fictional Sales Data"
+  ) +
+
+  # theme(): Customize the non-data components of the plot
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  )
+
+# Print the plot to the plot pane
+# In a script, you need to explicitly print the ggplot object.
+print(revenue_plot)
+
+# Save the plot to a file
+ggsave("sales_revenue_plot.png", plot = revenue_plot, width = 10, height = 8, dpi = 300)
+
+
+# ==============================================================================
+# SECTION 8: Statistical Modeling
+# ==============================================================================
+
+# Using the built-in 'mtcars' dataset
+
+# ---- 8.1 Linear Models (lm) ----
+# Model fuel efficiency (mpg) as a function of weight (wt) and number of cylinders (cyl)
+# The formula interface: `dependent_var ~ independent_var1 + independent_var2`
+car_model <- lm(mpg ~ wt + factor(cyl), data = mtcars)
+
+# summary(): Get detailed results of the model
+model_summary <- summary(car_model)
+print("Summary of the linear model (mpg ~ wt + cyl):")
+print(model_summary)
+
+# Extracting components from the model object
+coefficients <- coef(car_model)
+residuals <- resid(car_model)
+fitted_values <- fitted(car_model)
+
+print("Model Coefficients:")
+print(coefficients)
+
+# ---- 8.2 Prediction ----
+# Create a new data frame for prediction
+new_cars <- data.frame(
+  wt = c(2.2, 3.5, 4.0),
+  cyl = c(4, 6, 8)
+)
+
+# predict(): Use the model to predict mpg for the new cars
+predicted_mpg <- predict(car_model, newdata = new_cars)
+print("Predicted MPG for new cars:")
+print(data.frame(new_cars, PredictedMPG = predicted_mpg))
+
+
+# ---- 8.3 Generalized Linear Models (glm) ----
+# Example: Logistic regression
+# Predicting if a car has an automatic (am=0) or manual (am=1) transmission
+# We use family = "binomial" for logistic regression
+mtcars$am <- factor(mtcars$am, labels = c("Automatic", "Manual"))
+logistic_model <- glm(am ~ mpg + hp, data = mtcars, family = "binomial")
+
+print("Summary of the logistic regression model:")
+print(summary(logistic_model))
+
+
+# ---- 8.4 ANOVA (Analysis of Variance) ----
+# Is there a significant difference in miles per gallon between cars with different numbers of gears?
+gear_aov <- aov(mpg ~ factor(gear), data = mtcars)
+print("ANOVA results for mpg by number of gears:")
+print(summary(gear_aov))
+
+
+# ==============================================================================
+# SECTION 9: Object-Oriented Programming (OOP) in R
+# ==============================================================================
+
+# R has several OOP systems. We'll look at S3, S4, and R6.
+
+# ---- 9.1 S3 System ----
+# Informal, flexible. Based on generic functions.
+
+# 1. Create a constructor function
+create_project <- function(id, name, budget, team_members) {
+  if (!is.numeric(budget) || budget < 0) stop("Budget must be a non-negative number.")
+  
+  project <- list(
+    id = id,
+    name = name,
+    budget = budget,
+    team = team_members
+  )
+  
+  # 2. Assign a class attribute
+  class(project) <- "project"
+  return(project)
+}
+
+# 3. Create generic methods for print() and summary()
+print.project <- function(x, ...) {
+  cat("Project ID:", x$id, "\n")
+  cat("Project Name:", x$name, "\n")
+}
+
+summary.project <- function(object, ...) {
+  cat("--- Project Summary ---\n")
+  cat("ID:", object$id, "\n")
+  cat("Name:", object$name, "\n")
+  cat("Budget:", scales::dollar(object$budget), "\n")
+  cat("Team Size:", length(object$team), "\n")
+  cat("Team Members:", paste(object$team, collapse = ", "), "\n")
+}
+
+# Create an instance of our S3 class
+p1 <- create_project("P-101", "Data Warehouse Migration", 250000, c("Alice", "David", "Grace"))
+
+# The generic functions `print` and `summary` will now dispatch to our custom methods
+print("Printing an S3 'project' object:")
+print(p1)
+
+print("Summarizing an S3 'project' object:")
+summary(p1)
+
+
+# ---- 9.2 S4 System ----
+# Formal, with explicit class definitions and methods.
+
+# 1. Define the class and its "slots" (attributes)
+setClass("Employee",
+  slots = list(
+    id = "character",
+    name = "character",
+    salary = "numeric",
+    manager = "Employee" # A slot can be another S4 object (or use "ANY")
+  ),
+  prototype = list( # Default values
+    id = NA_character_,
+    name = NA_character_,
+    salary = NA_numeric_,
+    manager = NULL
+  )
+)
+
+# 2. Define methods for the class
+# A method for a generic function 'show' (S4's version of print)
+setMethod("show", "Employee", function(object) {
+  cat("S4 Employee Object\n")
+  cat("  ID:", object@id, "\n") # Use @ to access slots
+  cat("  Name:", object@name, "\n")
+  cat("  Salary:", object@salary, "\n")
+})
+
+# A new generic function and its method
+setGeneric("give_raise", function(object, percent) standardGeneric("give_raise"))
+
+setMethod("give_raise", "Employee", function(object, percent) {
+  if (percent > 0) {
+    object@salary <- object@salary * (1 + percent / 100)
+    cat(object@name, "was given a", percent, "% raise.\n")
+  }
+  return(object)
+})
+
+# 3. Create instances
+manager_bob <- new("Employee", id = "E102", name = "Bob", salary = 95000)
+employee_alice_s4 <- new("Employee", id = "E101", name = "Alice", salary = 60000, manager = manager_bob)
+
+print("Showing an S4 'Employee' object:")
+show(employee_alice_s4)
+employee_alice_s4 <- give_raise(employee_alice_s4, 5) # Re-assign because S4 objects are immutable
+show(employee_alice_s4)
+
+
+# ---- 9.3 R6 System ----
+# Encapsulated, feels more like traditional OOP (e.g., Python, Java).
+
+# 1. Define the class using R6Class
+BankAccount <- R6Class("BankAccount",
+  # Public members
+  public = list(
+    account_number = NULL,
+    owner = NULL,
+    
+    # The 'initialize' method is the constructor
+    initialize = function(account_number, owner, initial_balance = 0) {
+      self$account_number <- account_number
+      self$owner <- owner
+      private$balance <- initial_balance
+      cat("Account", self$account_number, "created for", self$owner, ".\n")
+    },
+    
+    deposit = function(amount) {
+      if (amount <= 0) {
+        stop("Deposit amount must be positive.")
+      }
+      private$balance <- private$balance + amount
+      cat("Deposited:", scales::dollar(amount), ". New balance:", scales::dollar(private$balance), ".\n")
+    },
+    
+    withdraw = function(amount) {
+      if (amount <= 0) {
+        stop("Withdrawal amount must be positive.")
+      }
+      if (amount > private$balance) {
+        stop("Insufficient funds.")
+      }
+      private$balance <- private$balance - amount
+      cat("Withdrew:", scales::dollar(amount), ". New balance:", scales::dollar(private$balance), ".\n")
+    },
+    
+    # An 'active binding' acts like a read-only public field
+    get_balance = function() {
+      return(private$balance)
+    }
+  ),
+  
+  # Private members (cannot be accessed from outside the class)
+  private = list(
+    balance = 0
+  )
+)
+
+# 2. Create and use an instance
+my_account <- BankAccount$new(account_number = "ACC123", owner = "Charlie", initial_balance = 1000)
+my_account$deposit(500)
+my_account$withdraw(200)
+
+# This will fail, as 'balance' is private:
+# my_account$balance
+# This is how you access it via the public method:
+print(paste("Current account balance:", scales::dollar(my_account$get_balance())))
+
+
+# ==============================================================================
+# SECTION 10: Advanced Topics
+# ==============================================================================
+
+# ---- 10.1 Error Handling with tryCatch ----
+risky_division <- function(x, y) {
+  tryCatch({
+      # The main code to 'try'
+      result <- x / y
+      if (is.infinite(result)) {
+        warning("Result is infinite.")
+      }
+      return(result)
+    },
+    warning = function(w) {
+      # What to do if a warning occurs
+      message("A warning was caught:", conditionMessage(w))
+      # Return a specific value on warning, e.g., NA
+      return(NA)
+    },
+    error = function(e) {
+      # What to do if an error occurs
+      message("An error was caught:", conditionMessage(e))
+      # Return a specific value on error
+      return(NULL)
+    },
+    finally = {
+      # Code that runs regardless of success, warning, or error
+      print("Risky division attempt finished.")
+    }
+  )
+}
+
+print(paste("Result of 10/2:", risky_division(10, 2)))
+print(paste("Result of 10/0:", risky_division(10, 0))) # Triggers a warning
+print(paste("Result of 10/'a':", risky_division(10, "a"))) # Triggers an error
+
+
+# ---- 10.2 Metaprogramming & Non-Standard Evaluation (NSE) with rlang ----
+# This is how dplyr functions like mutate work without requiring quotes around column names.
+
+# A simple function that uses standard evaluation (requires quotes)
+summarize_se <- function(data, column_name) {
+  data %>%
+    summarise(mean = mean(.data[[column_name]]), sd = sd(.data[[column_name]]))
+}
+
+print("Standard Evaluation (SE):")
+summarize_se(mtcars, "mpg")
+
+# A function that uses non-standard evaluation (NSE) with rlang's embrace operator `{{ }}`
+summarize_nse <- function(data, column_name) {
+  data %>%
+    summarise(mean = mean({{ column_name }}), sd = sd({{ column_name }}))
+}
+
+print("Non-Standard Evaluation (NSE):")
+summarize_nse(mtcars, mpg) # No quotes needed!
+
+# A function that can create a column with a dynamic name
+create_grouped_mean <- function(data, group_var, value_var, new_col_name) {
+  # We use the walrus operator `:=` for dynamic naming
+  data %>%
+    group_by({{ group_var }}) %>%
+    summarise({{ new_col_name }} := mean({{ value_var }}, na.rm = TRUE))
+}
+
+print("NSE with dynamic column naming:")
+create_grouped_mean(mtcars, group_var = cyl, value_var = hp, new_col_name = "mean_horsepower")
+
+
+# ---- 10.3 String Manipulation with base R and stringr ----
+
+my_string <- "The quick brown fox jumps over the lazy dog. Fox is fast."
+
+# Base R
+# Splitting a string
+words <- strsplit(my_string, " ")[[1]]
+print("String split into words (base R):")
+print(words)
+
+# Finding matches
+has_fox <- grepl("fox", my_string, ignore.case = TRUE)
+print(paste("Does the string contain 'fox' (case-insensitive)?", has_fox))
+
+# Replacing text
+new_string_base <- gsub("fox", "cat", my_string, ignore.case = TRUE)
+print(paste("String after replacement (base R):", new_string_base))
+
+# stringr package (part of tidyverse) - more consistent
+# Detecting patterns
+has_lazy_dog <- str_detect(my_string, "lazy dog")
+print(paste("Does the string contain 'lazy dog' (stringr)?", has_lazy_dog))
+
+# Replacing patterns
+new_string_str <- str_replace_all(my_string, "fox|dog", "animal")
+print(paste("String after replacement (stringr):", new_string_str))
+
+# Extracting patterns
+extracted_animals <- str_extract_all(my_string, "fox|dog")[[1]]
+print("Extracted animals (stringr):")
+print(extracted_animals)
+
+
+# ---- 10.4 Dates and Times with base R and lubridate ----
+
+# Base R
+current_time_posixct <- Sys.time() # POSIXct, for specific points in time
+current_date <- Sys.Date() # Date class
+
+print(paste("Current time (POSIXct):", current_time_posixct))
+print(paste("Current date (Date):", current_date))
+
+# Formatting dates
+formatted_date <- format(current_date, "%A, %B %d, %Y")
+print(paste("Formatted date:", formatted_date))
+
+# lubridate package - more intuitive
+# Parsing dates
+date1 <- ymd("2023-10-26")
+datetime1 <- ymd_hms("2023-10-26 14:30:00")
+print(paste("Parsed with lubridate:", date1, "and", datetime1))
+
+# Date arithmetic
+next_week <- date1 + weeks(1)
+time_diff <- difftime(ymd("2024-01-01"), ymd("2023-01-01"), units = "days")
+print(paste("A week after Oct 26, 2023 is:", next_week))
+print(paste("Days in 2023:", time_diff))
+
+# Extracting components
+print(paste("The month is", month(datetime1), "and the hour is", hour(datetime1)))
+
+
+# ==============================================================================
+# SECTION 11: File I/O and Environment
+# ==============================================================================
+
+# ---- 11.1 Reading and Writing CSV ----
+# Create a temporary directory for file operations
+if (!dir.exists("temp_data")) dir.create("temp_data")
+
+# Write the analysis result to a CSV file
+write.csv(analysis_result, file = "temp_data/analysis_result.csv", row.names = FALSE)
+
+# Read the data back in
+read_data <- read.csv("temp_data/analysis_result.csv")
+print("Data read back from CSV file:")
+print(head(read_data))
+
+# ---- 11.2 Reading and Writing R-native files ----
+# saveRDS is great for preserving R object types (e.g., factors, classes)
+saveRDS(car_model, file = "temp_data/linear_model.rds")
+
+# Load the object back
+loaded_model <- readRDS("temp_data/linear_model.rds")
+print("Summary of the model loaded from RDS file:")
+print(summary(loaded_model))
+
+
+# ---- 11.3 Environment Management ----
+# List objects in the current environment
+print("Objects in the current environment:")
+print(ls())
+
+# The global assignment operator `<<-` can modify variables in a parent environment
+# This is generally discouraged but is a feature of the language.
+global_counter <- 0
+increment_counter <- function() {
+  # This modifies the 'global_counter' in the global environment, not a local one
+  global_counter <<- global_counter + 1
+}
+increment_counter()
+increment_counter()
+print(paste("Global counter value after function calls:", global_counter))
+
+# Clean up the created files
+unlink("temp_data", recursive = TRUE)
+print("Cleaned up temporary data directory.")
+
+# ==============================================================================
+# SECTION 12: Parallel Computing
+# ==============================================================================
+
+# A simple example of parallel processing to speed up a computation.
+# This function simulates a time-consuming task.
+slow_function <- function(x) {
+  Sys.sleep(0.1) # Simulate work
+  return(x^2)
+}
+
+input_vector <- 1:20
+
+# ---- 12.1 Sequential execution (for comparison) ----
+start_time_seq <- Sys.time()
+result_seq <- lapply(input_vector, slow_function)
+end_time_seq <- Sys.time()
+time_taken_seq <- end_time_seq - start_time_seq
+print(paste("Sequential execution took:", round(time_taken_seq, 2), "seconds."))
+
+# ---- 12.2 Parallel execution ----
+# Detect the number of available cores
+num_cores <- detectCores() - 1 # Leave one core free
+print(paste("Using", num_cores, "cores for parallel execution."))
+
+# Create a cluster
+cl <- makeCluster(num_cores)
+
+# Parallel execution using parLapply
+start_time_par <- Sys.time()
+result_par <- parLapply(cl, input_vector, slow_function)
+end_time_par <- Sys.time()
+time_taken_par <- end_time_par - start_time_par
+print(paste("Parallel execution took:", round(time_taken_par, 2), "seconds."))
+
+# It's crucial to stop the cluster when you're done
+stopCluster(cl)
+
+# Check if results are the same
+print(paste("Are sequential and parallel results identical?", identical(unlist(result_seq), unlist(result_par))))
+
+# ==============================================================================
+# SECTION 13: Interfacing with C++ (Rcpp Example Concept)
+# ==============================================================================
+
+# NOTE: This code cannot be run directly in a standard R script without the Rcpp
+# package and a C++ toolchain. It is included to demonstrate the concept.
+# We will show it as a multi-line string comment.
+
+rcpp_code_string <- '
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+NumericVector rcpp_sum_faster(NumericVector x) {
+  double total = 0;
+  for(int i = 0; i < x.size(); ++i) {
+    total += x[i];
+  }
+  return NumericVector::create(total);
+}
+'
+cat("\n--- Example Rcpp Code (for demonstration) ---\n")
+cat(rcpp_code_string)
+cat("\n--- End of Rcpp Example ---\n")
+
+# If Rcpp were set up, you could use `Rcpp::sourceCpp()` to compile and
+# load this function, then call `rcpp_sum_faster(1:1000000)` for a much
+# faster sum than the base R `sum()` function for very large vectors.
+
+print("Script execution complete.")
+# --- END OF SCRIPT ---

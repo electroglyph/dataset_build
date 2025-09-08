@@ -1,0 +1,715 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+This is a comprehensive Python script demonstrating a wide variety of language features.
+It is intended for use in a dataset to analyze code structure and importance.
+The script includes examples of:
+- Core data structures and control flow
+- Object-Oriented Programming (OOP) with inheritance and polymorphism
+- Advanced features like decorators, generators, and context managers
+- Metaprogramming with metaclasses
+- Standard library usage (os, sys, json, re, asyncio, etc.)
+- Concurrency models (threading, multiprocessing, asyncio)
+- Type hinting and docstrings
+
+Author: AI Assistant
+Version: 1.0
+"""
+
+# ==============================================================================
+# SECTION 1: CORE PYTHON CONCEPTS & DATA STRUCTURES
+# ==============================================================================
+
+print("--- Section 1: Core Concepts ---")
+
+# 1.1: Basic Data Types and Variables
+integer_var: int = 100
+float_var: float = 3.14159
+complex_var: complex = 2 + 3j
+string_var: str = "Hello, Python!"
+boolean_var: bool = True
+none_var = None
+
+# 1.2: String Manipulation
+# f-strings (formatted string literals)
+f_string = f"The value of pi is approximately {float_var:.2f}"
+print(f_string)
+
+# .format() method
+format_string = "An integer {0} and a boolean {1}".format(integer_var, boolean_var)
+print(format_string)
+
+# Multi-line strings and raw strings
+multi_line_raw_string = r"""
+This is a raw, multi-line string.
+Newlines and backslashes \ are preserved literally.
+"""
+print(multi_line_raw_string)
+
+# 1.3: Data Structures
+
+# Lists: ordered, mutable collections
+my_list = [1, "two", 3.0, [4, 5]]
+my_list.append("new item")
+print(f"List: {my_list}")
+
+# List comprehensions
+squares = [x**2 for x in range(10) if x % 2 == 0]
+print(f"Squares of even numbers: {squares}")
+
+# Tuples: ordered, immutable collections
+my_tuple = (1, "two", 3.0)
+# Unpacking a tuple
+a, b, c = my_tuple
+print(f"Unpacked tuple: a={a}, b={b}, c={c}")
+
+# Dictionaries: unordered (in older Python), key-value pairs
+my_dict = {
+    "name": "Alice",
+    "age": 30,
+    "city": "New York"
+}
+my_dict["email"] = "alice@example.com"
+print(f"Dictionary: {my_dict}")
+
+# Dictionary comprehensions
+square_dict = {x: x**2 for x in range(5)}
+print(f"Square dictionary: {square_dict}")
+
+# Sets: unordered, unique elements
+my_set = {1, 2, 3, 3, 4, 5, 5}
+another_set = {4, 5, 6, 7}
+print(f"Set: {my_set}")
+print(f"Union: {my_set | another_set}")
+print(f"Intersection: {my_set & another_set}")
+
+# 1.4: Control Flow
+
+# if/elif/else
+if my_dict.get("age", 0) > 18:
+    print(f"{my_dict['name']} is an adult.")
+elif my_dict.get("age", 0) == 18:
+    print(f"{my_dict['name']} just became an adult.")
+else:
+    print(f"{my_dict['name']} is a minor.")
+
+# Ternary operator
+status = "adult" if my_dict.get("age", 0) >= 18 else "minor"
+print(f"Status (ternary): {status}")
+
+# for loop with else
+for i in range(5):
+    print(f"Loop iteration: {i}")
+else:
+    print("Loop finished successfully.")
+
+# while loop
+count = 5
+while count > 0:
+    if count == 2:
+        print("Skipping 2 with continue")
+        count -= 1
+        continue
+    if count == 1:
+        print("Breaking at 1")
+        break
+    print(f"While countdown: {count}")
+    count -= 1
+
+# 1.5: Functions
+
+def calculate_area(length: float, width: float = 1.0) -> float:
+    """Calculates the area of a rectangle.
+
+    Args:
+        length: The length of the rectangle.
+        width: The width of the rectangle (defaults to 1.0).
+
+    Returns:
+        The area of the rectangle.
+    """
+    return length * width
+
+# Positional and keyword arguments
+area1 = calculate_area(10, 5)
+area2 = calculate_area(length=7)
+print(f"Areas: {area1}, {area2}")
+
+# *args and **kwargs
+def kitchen_sink_function(*args, **kwargs):
+    """A function that accepts any number of arguments."""
+    print("Positional arguments (*args):", args)
+    print("Keyword arguments (**kwargs):", kwargs)
+
+kitchen_sink_function(1, 2, "three", name="Bob", job="Plumber")
+
+# Lambda functions
+multiply = lambda x, y: x * y
+print(f"Lambda result: {multiply(5, 6)}")
+
+# Using lambda with higher-order functions like map and filter
+numbers = [1, 2, 3, 4, 5, 6]
+doubled = list(map(lambda x: x * 2, numbers))
+evens = list(filter(lambda x: x % 2 == 0, numbers))
+print(f"Doubled with map: {doubled}")
+print(f"Evens with filter: {evens}")
+
+# 1.6: Error Handling
+try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print(f"Caught an error: {e}")
+except TypeError:
+    print("Caught a type error!")
+else:
+    print("This runs only if no exception occurred.")
+finally:
+    print("This runs no matter what.")
+
+# Custom exception
+class MyCustomError(Exception):
+    """A custom exception for demonstration."""
+    pass
+
+try:
+    raise MyCustomError("Something went wrong in a custom way!")
+except MyCustomError as e:
+    print(f"Caught custom error: {e}")
+
+
+# ==============================================================================
+# SECTION 2: OBJECT-ORIENTED PROGRAMMING (OOP)
+# ==============================================================================
+
+print("\n--- Section 2: Object-Oriented Programming ---")
+
+import abc
+from typing import List, Optional
+
+# 2.1: Abstract Base Class (ABC)
+class Entity(abc.ABC):
+    """Abstract base class for all game entities."""
+    def __init__(self, name: str, hp: int):
+        self._name = name  # Protected attribute
+        self._hp = hp
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def is_alive(self) -> bool:
+        return self._hp > 0
+
+    @abc.abstractmethod
+    def get_status(self) -> str:
+        """Return the current status of the entity."""
+        pass
+
+# 2.2: Class Definition and Inheritance
+class Character(Entity):
+    """A base class for playable characters."""
+    species = "Human"  # Class attribute
+
+    def __init__(self, name: str, hp: int, mana: int):
+        super().__init__(name, hp)
+        self.__mana = mana  # Private attribute
+        self.inventory: List['Item'] = []
+
+    def get_status(self) -> str:
+        return f"{self.name} (HP: {self._hp}, Mana: {self.__mana})"
+
+    def take_damage(self, amount: int):
+        self._hp -= amount
+        if self._hp < 0:
+            self._hp = 0
+        print(f"{self.name} takes {amount} damage!")
+
+    def add_item(self, item: 'Item'):
+        self.inventory.append(item)
+        print(f"{item.name} added to {self.name}'s inventory.")
+
+    # 2.3: Special Dunder Methods (Operator Overloading)
+    def __str__(self) -> str:
+        return f"Character<{self.name}>"
+
+    def __repr__(self) -> str:
+        return f"Character(name='{self.name}', hp={self._hp}, mana={self.__mana})"
+    
+    def __add__(self, other: 'Character') -> 'Character':
+        """Combines two characters into a 'chimera' for fun."""
+        new_name = f"{self.name}-{other.name}"
+        new_hp = self._hp + other._hp
+        new_mana = self.__mana + other._mana
+        return Character(new_name, new_hp, new_mana)
+
+# 2.4: Subclasses
+class Warrior(Character):
+    """A Warrior class, inheriting from Character."""
+    def __init__(self, name: str, hp: int = 150, mana: int = 20):
+        super().__init__(name, hp, mana)
+        self.rage = 0
+
+    def attack(self, target: Character):
+        damage = 10 + self.rage // 10
+        print(f"{self.name} swings their sword at {target.name} for {damage} damage!")
+        target.take_damage(damage)
+        self.rage += 5
+
+    # Method overriding
+    def get_status(self) -> str:
+        base_status = super().get_status()
+        return f"{base_status} (Rage: {self.rage})"
+
+class Mage(Character):
+    """A Mage class, inheriting from Character."""
+    def __init__(self, name: str, hp: int = 80, mana: int = 100):
+        super().__init__(name, hp, mana)
+        self.spellbook = ["Fireball", "Heal"]
+
+    def cast_spell(self, spell_name: str, target: Character):
+        if spell_name not in self.spellbook:
+            print(f"{self.name} doesn't know {spell_name}.")
+            return
+        
+        print(f"{self.name} casts {spell_name} on {target.name}!")
+        if spell_name == "Fireball":
+            target.take_damage(30)
+        elif spell_name == "Heal":
+            target._hp += 20 # Directly accessing protected member of another object
+            print(f"{target.name} is healed for 20 HP.")
+
+# 2.5: More Classes for Composition
+class Item:
+    """A generic item."""
+    _instance_count = 0
+
+    def __init__(self, name: str, value: int):
+        self.name = name
+        self.value = value
+        Item._instance_count += 1
+
+    @staticmethod
+    def a_static_method():
+        """A method that doesn't need a class or instance."""
+        return "This is a static method. It doesn't know about the class or instance."
+
+    @classmethod
+    def get_instance_count(cls) -> int:
+        """A method that works on the class itself."""
+        return cls._instance_count
+
+class Potion(Item):
+    """A potion that restores HP."""
+    def __init__(self, name: str, value: int, restore_amount: int):
+        super().__init__(name, value)
+        self.restore_amount = restore_amount
+    
+    def use(self, character: Character):
+        print(f"{character.name} drinks {self.name} and restores {self.restore_amount} HP.")
+        character._hp += self.restore_amount
+
+# 2.6: Create instances and demonstrate interaction
+aragorn = Warrior("Aragorn")
+gandalf = Mage("Gandalf")
+health_potion = Potion("Health Potion", 50, 40)
+
+aragorn.add_item(health_potion)
+print(aragorn.get_status())
+print(gandalf.get_status())
+
+aragorn.attack(gandalf)
+gandalf.cast_spell("Fireball", aragorn)
+
+print(aragorn.get_status())
+print(gandalf.get_status())
+
+# Demonstrate polymorphism with the potion's `use` method
+health_potion.use(aragorn)
+print(aragorn.get_status())
+
+# Demonstrate static and class methods
+print(Item.a_static_method())
+print(f"Total items created: {Item.get_instance_count()}")
+
+# Demonstrate operator overloading
+chimera = aragorn + gandalf
+print(f"Created a chimera: {chimera.get_status()}")
+
+
+# ==============================================================================
+# SECTION 3: ADVANCED PYTHON & METAPROGRAMMING
+# ==============================================================================
+
+print("\n--- Section 3: Advanced Python ---")
+
+import functools
+import time
+import sqlite3
+from contextlib import contextmanager
+
+# 3.1: Decorators
+def log_call(func):
+    """A decorator that logs when a function is called."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"Calling function '{func.__name__}'...")
+        result = func(*args, **kwargs)
+        print(f"Function '{func.__name__}' finished.")
+        return result
+    return wrapper
+
+def time_it(func):
+    """A decorator that measures the execution time of a function."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' took {end_time - start_time:.4f} seconds.")
+        return result
+    return wrapper
+
+@log_call
+@time_it
+def slow_function(delay: float):
+    """A sample function that takes some time to run."""
+    time.sleep(delay)
+    return "Done"
+
+slow_function(0.5)
+
+# 3.2: functools.lru_cache for memoization
+@functools.lru_cache(maxsize=None)
+def fibonacci(n: int) -> int:
+    """Calculates the nth Fibonacci number with caching."""
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+print("Calculating Fibonacci(35)...")
+start_fib = time.perf_counter()
+fib_result = fibonacci(35)
+end_fib = time.perf_counter()
+print(f"Fibonacci(35) = {fib_result} (took {end_fib - start_fib:.6f}s)")
+
+# 3.3: Generators
+def prime_generator(limit: int):
+    """A generator that yields prime numbers up to a limit."""
+    numbers = [True] * (limit + 1)
+    numbers[0] = numbers[1] = False
+    for i in range(2, limit + 1):
+        if numbers[i]:
+            yield i
+            for multiple in range(i * i, limit + 1, i):
+                numbers[multiple] = False
+
+print("Primes up to 30:", list(prime_generator(30)))
+
+# Generator expression
+cubes_gen = (x**3 for x in range(10))
+print("First 5 cubes from generator:", [next(cubes_gen) for _ in range(5)])
+
+# 3.4: Context Managers
+class DatabaseConnection:
+    """A simple class-based context manager for a 'database'."""
+    def __init__(self, db_name: str):
+        self._db_name = db_name
+        self._conn = None
+        print(f"Initializing connection to {self._db_name}")
+
+    def __enter__(self):
+        print("Opening database connection...")
+        # Simulating a real connection
+        self._conn = f"Connection to {self._db_name}"
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("Closing database connection.")
+        if exc_type:
+            print(f"An exception occurred: {exc_val}")
+        # Return False to propagate the exception, True to suppress it.
+        return False
+
+    def query(self, sql: str):
+        print(f"Executing query: '{sql}' on {self._conn}")
+
+with DatabaseConnection("my_app.db") as db:
+    db.query("SELECT * FROM users")
+    # Uncomment below to see exception handling in __exit__
+    # raise ValueError("Something went wrong with the query")
+
+# Context manager using a generator
+@contextmanager
+def temporary_file(content: str):
+    """A context manager that creates a temporary file."""
+    import os
+    filename = "temp_file.txt"
+    print(f"Creating temporary file '{filename}'")
+    with open(filename, "w") as f:
+        f.write(content)
+    try:
+        yield filename
+    finally:
+        print(f"Cleaning up and deleting '{filename}'")
+        os.remove(filename)
+
+with temporary_file("This is temporary content.") as temp_path:
+    with open(temp_path, 'r') as f:
+        print(f"Read from temp file: '{f.read()}'")
+
+# 3.5: Metaclasses
+class TimestampedMeta(type):
+    """A metaclass that adds a 'created_at' attribute to classes."""
+    def __new__(cls, name, bases, dct):
+        # dct is the dictionary of the class's attributes
+        dct['created_at'] = time.time()
+        # Call the parent's __new__ to actually create the class
+        return super().__new__(cls, name, bases, dct)
+
+class Model(metaclass=TimestampedMeta):
+    """A base model class using our metaclass."""
+    pass
+
+class User(Model):
+    """A user model."""
+    def __init__(self, name):
+        self.name = name
+
+class Product(Model):
+    """A product model."""
+    def __init__(self, price):
+        self.price = price
+
+print(f"User class created at: {User.created_at}")
+time.sleep(0.01) # ensure a different timestamp
+class Order(Model): pass
+print(f"Product class created at: {Product.created_at}")
+print(f"Order class created at: {Order.created_at}")
+
+
+# ==============================================================================
+# SECTION 4: STANDARD LIBRARY SHOWCASE
+# ==============================================================================
+
+print("\n--- Section 4: Standard Library Showcase ---")
+
+import os
+import sys
+import json
+import re
+import logging
+from collections import Counter, defaultdict, namedtuple
+from datetime import datetime
+from pathlib import Path
+from dataclasses import dataclass
+
+# 4.1: Setting up Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 4.2: Dataclasses for structured data
+@dataclass
+class LogEntry:
+    ip_address: str
+    timestamp: datetime
+    method: str
+    path: str
+    status_code: int
+
+# 4.3: A small data processing pipeline
+class LogProcessor:
+    """Processes web server log files."""
+
+    def __init__(self, log_dir: Path):
+        if not log_dir.is_dir():
+            raise FileNotFoundError(f"Directory not found: {log_dir}")
+        self.log_dir = log_dir
+        # Regex to parse a common log format line
+        self.log_pattern = re.compile(
+            r'(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - - '
+            r'\[(?P<time>.+)\] "(?P<method>\w+) (?P<path>/.+?) .+" '
+            r'(?P<status>\d{3})'
+        )
+        self.date_format = "%d/%b/%Y:%H:%M:%S %z"
+
+    def parse_line(self, line: str) -> Optional[LogEntry]:
+        """Parses a single log line."""
+        match = self.log_pattern.search(line)
+        if not match:
+            return None
+        data = match.groupdict()
+        return LogEntry(
+            ip_address=data['ip'],
+            timestamp=datetime.strptime(data['time'], self.date_format),
+            method=data['method'],
+            path=data['path'],
+            status_code=int(data['status'])
+        )
+
+    def process_logs(self) -> dict:
+        """Processes all .log files in the specified directory."""
+        logging.info(f"Starting log processing for directory: {self.log_dir}")
+        
+        all_entries = []
+        for log_file in self.log_dir.glob("*.log"):
+            logging.info(f"Processing file: {log_file}")
+            with open(log_file, 'r') as f:
+                for line in f:
+                    entry = self.parse_line(line)
+                    if entry:
+                        all_entries.append(entry)
+        
+        if not all_entries:
+            logging.warning("No valid log entries found.")
+            return {}
+
+        # 4.4: Using collections for analysis
+        ip_counter = Counter(entry.ip_address for entry in all_entries)
+        status_counter = Counter(entry.status_code for entry in all_entries)
+        
+        # Using namedtuple
+        Report = namedtuple('Report', ['total_requests', 'top_5_ips', 'status_summary'])
+        
+        report = Report(
+            total_requests=len(all_entries),
+            top_5_ips=ip_counter.most_common(5),
+            status_summary=dict(status_counter)
+        )
+        
+        logging.info("Log processing complete.")
+        return report._asdict()
+
+    def generate_json_report(self, report_data: dict, output_path: Path):
+        """Saves the report data as a JSON file."""
+        logging.info(f"Generating JSON report at: {output_path}")
+        try:
+            with open(output_path, 'w') as f:
+                json.dump(report_data, f, indent=4, default=str) # default=str to handle datetime
+            logging.info("Report successfully generated.")
+        except IOError as e:
+            logging.error(f"Failed to write report: {e}")
+            sys.exit(1)
+
+# Simulating the log processing
+def simulate_log_creation(temp_dir: Path):
+    """Creates some fake log files for the processor to use."""
+    log_content1 = """
+    127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326
+    192.168.1.1 - - [10/Oct/2000:13:55:36 -0700] "GET /index.html HTTP/1.0" 200 5000
+    192.168.1.1 - - [10/Oct/2000:13:56:10 -0700] "POST /api/data HTTP/1.1" 201 120
+    203.0.113.45 - - [10/Oct/2000:14:01:00 -0700] "GET /notfound.html HTTP/1.0" 404 300
+    """
+    log_content2 = """
+    192.168.1.1 - - [11/Oct/2000:10:00:00 -0700] "GET /about.html HTTP/1.0" 200 3500
+    127.0.0.1 - - [11/Oct/2000:10:00:15 -0700] "GET /apache_pb.gif HTTP/1.0" 304 0
+    192.168.1.1 - - [11/Oct/2000:10:01:00 -0700] "PUT /api/data/123 HTTP/1.1" 500 50
+    """
+    (temp_dir / "access1.log").write_text(log_content1)
+    (temp_dir / "access2.log").write_text(log_content2)
+    (temp_dir / "notes.txt").write_text("This is not a log file.")
+
+# Main execution for this section
+temp_log_dir = Path("./temp_logs")
+temp_log_dir.mkdir(exist_ok=True)
+simulate_log_creation(temp_log_dir)
+
+processor = LogProcessor(temp_log_dir)
+report_data = processor.process_logs()
+report_path = temp_log_dir / "report.json"
+processor.generate_json_report(report_data, report_path)
+
+print(f"Log processing report:\n{json.dumps(report_data, indent=2, default=str)}")
+
+# Cleanup
+for f in temp_log_dir.glob("*"): f.unlink()
+temp_log_dir.rmdir()
+
+
+# ==============================================================================
+# SECTION 5: CONCURRENCY AND ASYNCHRONY
+# ==============================================================================
+
+print("\n--- Section 5: Concurrency and Asynchrony ---")
+
+import threading
+import multiprocessing
+import asyncio
+import random
+
+# 5.1: Threading for I/O-bound tasks
+def worker_thread_task(url: str):
+    """Simulates downloading a web page."""
+    thread_name = threading.current_thread().name
+    print(f"[{thread_name}] Starting download from {url}")
+    # Simulate network latency
+    time.sleep(random.uniform(0.5, 1.5))
+    print(f"[{thread_name}] Finished download from {url}")
+
+urls_to_fetch = [
+    "http://example.com",
+    "http://example.org",
+    "http://example.net",
+]
+
+threads = []
+print("\nStarting threaded download...")
+for url in urls_to_fetch:
+    thread = threading.Thread(target=worker_thread_task, args=(url,), name=f"Thread-{url.split('.')[-1]}")
+    threads.append(thread)
+    thread.start()
+
+for thread in threads:
+    thread.join()
+print("All threaded downloads complete.")
+
+
+# 5.2: Multiprocessing for CPU-bound tasks
+def worker_process_task(n: int) -> int:
+    """A CPU-intensive task (calculating a large sum)."""
+    process_name = multiprocessing.current_process().name
+    print(f"[{process_name}] Calculating sum for n={n}")
+    total = sum(i * i for i in range(n))
+    print(f"[{process_name}] Finished calculation for n={n}")
+    return total
+
+numbers_to_process = [10**6, 10**6 + 1, 10**6 + 2, 10**6 + 3]
+
+print("\nStarting multiprocessing calculation...")
+if __name__ == "__main__": # Guard for multiprocessing
+    with multiprocessing.Pool(processes=2) as pool:
+        results = pool.map(worker_process_task, numbers_to_process)
+    print("All multiprocessing calculations complete.")
+    print("Results:", results)
+
+
+# 5.3: Asyncio for concurrent I/O
+async def async_fetch(url: str):
+    """Simulates an asynchronous API call."""
+    print(f"Starting async fetch for {url}")
+    # Simulate non-blocking I/O operation
+    await asyncio.sleep(random.uniform(0.5, 1.2))
+    print(f"Finished async fetch for {url}")
+    return {"url": url, "status": "ok"}
+
+async def main_async_task():
+    """The main entry point for the asyncio part."""
+    print("\nStarting asyncio tasks...")
+    # Create a list of tasks to run concurrently
+    tasks = [async_fetch(url) for url in urls_to_fetch]
+    # Wait for all tasks to complete
+    results = await asyncio.gather(*tasks)
+    print("All asyncio tasks complete.")
+    print("Async results:", results)
+
+# Running the asyncio event loop
+if __name__ == "__main__":
+    try:
+        asyncio.run(main_async_task())
+    except RuntimeError:
+        # Fallback for environments where asyncio.run might not work (like some IDEs)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main_async_task())
+
+
+print("\n--- Script Finished ---")

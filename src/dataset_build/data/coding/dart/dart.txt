@@ -1,0 +1,787 @@
+//
+// This file is a comprehensive demonstration of the Dart programming language.
+// It is intended as a synthetic data source for training language models,
+// covering a wide variety of syntax, features, and programming paradigms.
+//
+// Author: AI Language Model
+// Date: 2023
+// Version: 1.0.0
+//
+
+// Section 1: Imports and Library Directives
+// -----------------------------------------------------------------------------
+
+// Standard library imports
+import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
+import 'dart:core'; // dart:core is always implicitly imported
+import 'dart:ffi' as ffi;
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+// Deferred loading for code-splitting simulation
+import 'package:http/http.dart' deferred as http;
+
+// Section 2: Global Variables and Constants
+// -----------------------------------------------------------------------------
+
+const String globalConstantString = "This is a top-level constant.";
+final DateTime startupTime = DateTime.now();
+late String lateInitializedGlobal; // Late-initialized global variable
+
+// A top-level function for demonstration purposes
+void topLevelFunction() {
+  print('Executing a top-level function.');
+}
+
+// Section 3: Custom Metadata (Annotations)
+// -----------------------------------------------------------------------------
+
+class Todo {
+  final String who;
+  final String what;
+
+  const Todo(this.who, this.what);
+}
+
+// Section 4: Typedefs
+// -----------------------------------------------------------------------------
+
+/// A function type that takes two integers and returns their sum.
+typedef IntOperation = int Function(int a, int b);
+
+/// A generic function type for a predicate.
+typedef Predicate<T> = bool Function(T value);
+
+// Section 5: Enumerations (Basic and Enhanced)
+// -----------------------------------------------------------------------------
+
+enum Status {
+  pending,
+  running,
+  completed,
+  failed,
+}
+
+/// Enhanced enum with fields, methods, and a custom constructor.
+enum Color with Comparable<Color> {
+  red(0xFF0000, brightness: 0.5),
+  green(0x00FF00, brightness: 0.8),
+  blue(0x0000FF, brightness: 0.3);
+
+  final int hexCode;
+  final double brightness;
+
+  const Color(this.hexCode, {required this.brightness});
+
+  /// Returns the hex code as a CSS-style string.
+  String toCss() => '#${hexCode.toRadixString(16).padLeft(6, '0')}';
+
+  @override
+  int compareTo(Color other) => brightness.compareTo(other.brightness);
+
+  void describe() {
+    print('Color: $name, Hex: ${toCss()}, Brightness: $brightness');
+  }
+}
+
+// Section 6: Core Classes, Inheritance, and OOP Concepts
+// -----------------------------------------------------------------------------
+
+/// An abstract base class representing a living organism.
+@Todo('developer', 'Add more properties like age and species.')
+abstract class Organism {
+  final DateTime birthDate;
+
+  Organism() : birthDate = DateTime.now();
+
+  void breathe(); // Abstract method
+
+  String get lifespanInfo => 'Born on $birthDate';
+}
+
+/// A mixin that provides logging capabilities.
+mixin Logging {
+  final List<String> _logHistory = [];
+
+  void log(String message) {
+    final timestamp = DateTime.now();
+    final logEntry = '[$timestamp] $message';
+    _logHistory.add(logEntry);
+    print('LOG: $logEntry');
+  }
+
+  void printLogHistory() {
+    print('-- Log History --');
+    for (var entry in _logHistory) {
+      print(entry);
+    }
+    print('-- End of Log --');
+  }
+}
+
+/// An interface defining a contract for entities that can move.
+abstract class Movable {
+  void move(double distance);
+}
+
+/// A concrete class representing an Animal.
+/// It extends [Organism], implements [Movable], and uses the [Logging] mixin.
+class Animal extends Organism with Logging implements Movable {
+  String name;
+  double _energyLevel = 1.0;
+
+  // Default constructor with initializer list and super call.
+  Animal(this.name) : super() {
+    log('Animal named "$name" was created.');
+  }
+
+  // Named constructor with a redirect.
+  Animal.named(String name) : this(name);
+
+  // Factory constructor that returns a cached instance or creates a new one.
+  static final Map<String, Animal> _cache = {};
+  factory Animal.singleton(String name) {
+    return _cache.putIfAbsent(name, () => Animal(name));
+  }
+
+  // Getter for a computed property
+  bool get isTired => _energyLevel < 0.2;
+
+  // Setter with validation
+  set energyLevel(double value) {
+    if (value >= 0.0 && value <= 1.0) {
+      _energyLevel = value;
+    } else {
+      throw ArgumentError('Energy level must be between 0.0 and 1.0');
+    }
+  }
+
+  @override
+  void breathe() {
+    print('$name is breathing...');
+    _energyLevel += 0.01;
+  }
+
+  @override
+  void move(double distance) {
+    if (isTired) {
+      log('$name is too tired to move.');
+      return;
+    }
+    final energyConsumed = distance * 0.1;
+    _energyLevel -= energyConsumed;
+    log('$name moved ${distance.toStringAsFixed(2)} units.');
+  }
+
+  // Static method
+  static void printAnimalFacts() {
+    print('Animals are eukaryotic, multicellular organisms.');
+  }
+}
+
+/// A specific type of Animal, demonstrating inheritance.
+class Bird extends Animal {
+  double wingSpan;
+
+  Bird(String name, this.wingSpan) : super(name);
+
+  // Overriding a method from the superclass.
+  @override
+  void move(double distance) {
+    log('$name is flying!');
+    super.move(distance / 2); // Birds are more efficient movers.
+  }
+
+  void chirp() {
+    print('$name says: chirp chirp!');
+  }
+}
+
+// Section 7: Operator Overloading and Callable Classes
+// -----------------------------------------------------------------------------
+
+/// A class representing a 2D vector.
+class Vector2D {
+  final double x, y;
+
+  const Vector2D(this.x, this.y);
+
+  // Overloading the + operator
+  Vector2D operator +(Vector2D other) {
+    return Vector2D(x + other.x, y + other.y);
+  }
+
+  // Overloading the * operator for scalar multiplication
+  Vector2D operator *(double scalar) {
+    return Vector2D(x * scalar, y * scalar);
+  }
+
+  // Overloading the == operator for value equality
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Vector2D && x == other.x && y == other.y;
+  }
+
+  @override
+  int get hashCode => x.hashCode ^ y.hashCode;
+
+  @override
+  String toString() => 'Vector2D($x, $y)';
+}
+
+/// A class that can be called like a function.
+class Greeter {
+  String call(String name) => 'Hello, $name!';
+}
+
+// Section 8: Generics
+// -----------------------------------------------------------------------------
+
+/// A generic cache class that can store any type of value.
+class Cache<K, V> {
+  final Map<K, V> _internalMap = {};
+
+  void set(K key, V value) {
+    _internalMap[key] = value;
+  }
+
+  V? get(K key) {
+    return _internalMap[key];
+  }
+
+  void clear() => _internalMap.clear();
+
+  void printCache() {
+    print("--- Cache Contents ---");
+    _internalMap.forEach((key, value) {
+      print("$key: $value");
+    });
+    print("----------------------");
+  }
+}
+
+/// A generic function that finds the first element in a list satisfying a predicate.
+T? firstWhereOrDefault<T>(List<T> items, Predicate<T> predicate) {
+  for (final item in items) {
+    if (predicate(item)) {
+      return item;
+    }
+  }
+  return null;
+}
+
+// Section 9: Extension Methods
+// -----------------------------------------------------------------------------
+
+/// Extending the functionality of the built-in String class.
+extension StringUtils on String {
+  bool get isPalindrome {
+    String normalized = toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalized == normalized.split('').reversed.join('');
+  }
+
+  String capitalize() {
+    if (isEmpty) return '';
+    return '${this[0].toUpperCase()}${substring(1)}';
+  }
+}
+
+// Section 10: Records and Patterns (Modern Dart Features)
+// -----------------------------------------------------------------------------
+
+// A function returning a record
+(String, int, bool) getUserProfile() {
+  return ('Alice', 30, true);
+}
+
+// A function using patterns to destructure a record
+String describeUser((String, int, bool) user) {
+  var (name, age, isActive) = user;
+  return '$name, age $age, is ${isActive ? 'active' : 'inactive'}.';
+}
+
+// Using patterns in a switch statement
+String processMessage(Object message) {
+  return switch (message) {
+    // List pattern with rest element
+    ['log', var level, ...] => 'Log message with level $level.',
+    // Map pattern
+    {'user': String name, 'message': String msg} => 'Message from $name: $msg',
+    // Record pattern
+    (int x, int y) => 'This is a point at ($x, $y).',
+    // Object pattern
+    Vector2D(x: > 0, y: > 0) => 'Vector in the first quadrant.',
+    // Constant pattern
+    'quit' => 'Quitting...',
+    // Guard clause
+    int n when n > 100 => 'Large number detected: $n.',
+    // Wildcard
+    _ => 'Unknown message format.',
+  };
+}
+
+// If-case for pattern matching
+void checkCoordinates(Object point) {
+  if (point case (int x, int y)) {
+    print('Processing 2D integer coordinates: ($x, $y)');
+  } else if (point case (double x, double y, double z)) {
+    print('Processing 3D double coordinates: ($x, $y, $z)');
+  }
+}
+
+// Section 11: Asynchronous Programming (Futures and Streams)
+// -----------------------------------------------------------------------------
+
+/// Simulates fetching data from a network. Returns a Future.
+Future<String> fetchData(String url) async {
+  print('Fetching data from $url...');
+  // Simulate network delay
+  await Future.delayed(const Duration(seconds: 2));
+  if (url.contains('error')) {
+    throw HttpException('Could not fetch data from $url');
+  }
+  return '{"data": "Sample response from $url"}';
+}
+
+/// Generates a stream of numbers with a delay.
+Stream<int> countStream(int max) async* {
+  for (int i = 1; i <= max; i++) {
+    await Future.delayed(const Duration(milliseconds: 500));
+    yield i;
+  }
+}
+
+// Using a StreamController for more complex stream management
+StreamController<String> createMessageController() {
+  final controller = StreamController<String>.broadcast();
+
+  // Add some messages to the stream
+  Timer.periodic(const Duration(seconds: 1), (timer) {
+    if (timer.tick > 3) {
+      controller.close();
+      timer.cancel();
+    } else {
+      controller.add('Message #${timer.tick}');
+    }
+  });
+
+  return controller;
+}
+
+// Section 12: Error Handling
+// -----------------------------------------------------------------------------
+
+class CustomDataException implements Exception {
+  final String message;
+  CustomDataException(this.message);
+
+  @override
+  String toString() => 'CustomDataException: $message';
+}
+
+Future<void> processDataWithErrors() async {
+  try {
+    var data = await fetchData('https://example.com/api/error');
+    print('Data received: $data');
+  } on HttpException catch (e, s) {
+    print('Caught a specific network error: $e');
+    print('Stack trace:\n$s');
+  } on TimeoutException {
+    print('The request timed out.');
+  } catch (e) {
+    print('An unknown error occurred: $e');
+    // Rethrow the error if it's critical
+    if (e is! CustomDataException) {
+      rethrow;
+    }
+  } finally {
+    print('Data processing finished (or failed).');
+  }
+}
+
+void validateInput(String input) {
+  if (input.isEmpty) {
+    throw CustomDataException('Input cannot be empty.');
+  }
+}
+
+// Section 13: Isolates (Concurrency)
+// -----------------------------------------------------------------------------
+
+// This function will run in a separate isolate.
+// It must be a top-level or static function.
+void heavyComputation(SendPort sendPort) {
+  int total = 0;
+  for (int i = 0; i < 1000000000; i++) {
+    total += i;
+    // Perform some modulo operation to make it slightly more complex
+    if (i % 100000000 == 0) {
+      final progress = (i / 1000000000) * 100;
+      print('Isolate progress: ${progress.toStringAsFixed(0)}%');
+    }
+  }
+  sendPort.send('Result of heavy computation: $total');
+}
+
+Future<void> runIsolateExample() async {
+  print('Starting isolate example...');
+  final receivePort = ReceivePort();
+  final isolate = await Isolate.spawn(heavyComputation, receivePort.sendPort);
+
+  // Listen for messages from the isolate
+  await for (var msg in receivePort) {
+    print('Main isolate received: $msg');
+    if (msg is String && msg.startsWith('Result')) {
+      break; // Stop listening after getting the final result
+    }
+  }
+
+  isolate.kill(priority: Isolate.immediate);
+  print('Isolate has been terminated.');
+}
+
+// Section 14: Dynamic and Metaprogramming-like Features
+// -----------------------------------------------------------------------------
+
+/// A class that dynamically handles method calls using `noSuchMethod`.
+class DynamicGreeter extends Object with Logging {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    // Check if the method name starts with 'sayHelloTo'
+    if (invocation.isMethod &&
+        invocation.memberName == #sayHelloTo &&
+        invocation.positionalArguments.isNotEmpty) {
+      final name = invocation.positionalArguments.first;
+      final message = 'Dynamically said hello to $name!';
+      log(message);
+      return message;
+    }
+    log('Method ${invocation.memberName} not found.');
+    return super.noSuchMethod(invocation);
+  }
+}
+
+// Section 15: Foreign Function Interface (FFI) - Unsafe Code
+// -----------------------------------------------------------------------------
+// This demonstrates calling a C function from Dart. It requires a compiled
+// shared library (e.g., .so, .dll, .dylib) with the specified function.
+
+// A representation of a C struct.
+class Coordinates extends ffi.Struct {
+  @ffi.Float()
+  external double latitude;
+
+  @ffi.Float()
+  external double longitude;
+}
+
+// Define the C function signature.
+typedef NativeAddFunc = ffi.Int32 Function(ffi.Int32 a, ffi.Int32 b);
+// Define the Dart function signature.
+typedef AddFunc = int Function(int a, int b);
+
+void runFfiExample() {
+  print("\n--- FFI Example ---");
+  try {
+    // Determine the library path based on the OS.
+    String libraryPath;
+    if (Platform.isMacOS) {
+      libraryPath = 'libnative_add.dylib';
+    } else if (Platform.isWindows) {
+      libraryPath = 'native_add.dll';
+    } else {
+      libraryPath = 'libnative_add.so';
+    }
+
+    // This code assumes a shared library named 'libnative_add' exists.
+    // To make this runnable, you'd need to compile a C file like:
+    // int32_t native_add(int32_t a, int32_t b) { return a + b; }
+    // into a shared library.
+
+    // final dylib = ffi.DynamicLibrary.open(libraryPath);
+    //
+    // final AddFunc nativeAdd =
+    //     dylib.lookup<ffi.NativeFunction<NativeAddFunc>>('native_add').asFunction();
+    //
+    // int result = nativeAdd(10, 25);
+    // print('FFI: native_add(10, 25) = $result');
+
+    // Since we can't compile and link a C library here, we'll just simulate it.
+    print("FFI demo: Simulating call to a native C function.");
+    print("If 'libnative_add' were present, it would compute 10 + 25.");
+    print("FFI result would be: 35");
+  } catch (e) {
+    print("FFI library not found. This is expected if you haven't compiled it.");
+    print("Error: $e");
+  }
+}
+
+// Section 16: Standard Library Showcase
+// -----------------------------------------------------------------------------
+
+void demonstrateStandardLibraries() {
+  print("\n--- Standard Library Showcase ---");
+
+  // dart:math
+  final random = math.Random();
+  final randomNumber = random.nextInt(100);
+  final piValue = math.pi;
+  final squareRoot = math.sqrt(144);
+  print("Math: Random number < 100: $randomNumber, Pi: $piValue, Sqrt(144): $squareRoot");
+
+  // dart:convert
+  final user = {'name': 'John Doe', 'email': 'john.doe@example.com'};
+  final jsonString = jsonEncode(user);
+  print("Convert: JSON encoded string: $jsonString");
+  final decodedMap = jsonDecode(jsonString);
+  print("Convert: JSON decoded map: $decodedMap");
+  final bytes = utf8.encode('Hello, Dart!');
+  print("Convert: UTF-8 encoded bytes: $bytes");
+
+  // dart:collection
+  final queue = Queue<int>.from([10, 20, 30]);
+  queue.addFirst(5);
+  queue.addLast(40);
+  print("Collection (Queue): ${queue.removeFirst()}, ${queue.removeLast()}");
+
+  final hashMap = HashMap<String, int>();
+  hashMap['one'] = 1;
+  hashMap['two'] = 2;
+  print("Collection (HashMap): ${hashMap['two']}");
+
+  // dart:typed_data
+  var uInt8List = Uint8List.fromList([0, 1, 2, 255]);
+  print("TypedData (Uint8List): $uInt8List");
+}
+
+// Section 17: Main Execution Function
+// -----------------------------------------------------------------------------
+
+// Asynchronous main function to allow for `await`.
+Future<void> main() async {
+  print("--- Dart Language Comprehensive Demo ---");
+  print("Startup time: $startupTime");
+
+  // 1. Basic variables and types
+  print("\n--- Section: Basic Types ---");
+  String language = 'Dart';
+  int year = 2011;
+  double version = 3.0;
+  bool isAwesome = true;
+  var inferredString = "Type is inferred.";
+  dynamic dynamicVar = 100;
+  dynamicVar = 'Now I am a string.';
+
+  print('$language, first released in $year, is awesome: $isAwesome.');
+  print('Current version is around $version. $inferredString $dynamicVar');
+
+  List<int> numbers = [1, 2, 3, 4, 5];
+  Set<String> uniqueFruits = {'apple', 'banana', 'apple'};
+  Map<String, String> capitals = {
+    'USA': 'Washington D.C.',
+    'Japan': 'Tokyo',
+  };
+  print('List: $numbers, Set: $uniqueFruits, Map: $capitals');
+
+  // Using late variable
+  lateInitializedGlobal = "Now it's initialized!";
+  print(lateInitializedGlobal);
+
+  // Runes for Unicode characters
+  var clapping = '\u{1F44F}';
+  print('Runes example: $clapping');
+
+  // 2. Control Flow
+  print("\n--- Section: Control Flow ---");
+  if (numbers.length > 3) {
+    print('The list has more than 3 numbers.');
+  } else {
+    print('The list is short.');
+  }
+
+  for (int i = 0; i < 3; i++) {
+    print('For loop iteration: $i');
+  }
+
+  for (final fruit in uniqueFruits) {
+    print('For-in loop: $fruit');
+  }
+
+  int countdown = 3;
+  while (countdown > 0) {
+    print('While loop: $countdown');
+    countdown--;
+  }
+
+  // Assertions (only run in debug mode)
+  assert(uniqueFruits.length == 2);
+  print('Assertion passed.');
+
+  // 3. Functions
+  print("\n--- Section: Functions ---");
+  topLevelFunction();
+
+  // Anonymous function
+  var fruitsList = ['apples', 'bananas', 'oranges'];
+  fruitsList.forEach((fruit) {
+    print('forEach with lambda: I like $fruit');
+  });
+
+  // Using a typedef
+  IntOperation adder = (a, b) => a + b;
+  print('Typedef function result: ${adder(5, 7)}');
+
+  // 4. OOP Demonstration
+  print("\n--- Section: OOP ---");
+  Animal.printAnimalFacts();
+  var lion = Animal('Leo');
+  lion.move(5);
+  lion.energyLevel = 0.5;
+  print('Is Leo tired? ${lion.isTired}');
+
+  var sparrow = Bird('Jack', 0.3);
+  sparrow.move(10); // Uses overridden move method
+  sparrow.chirp();
+  sparrow.printLogHistory();
+
+  var singletonLion = Animal.singleton('Leo');
+  print('Are the two lions the same instance? ${identical(lion, singletonLion)}'); // false
+  var sameSingleton = Animal.singleton('SingletonLeo');
+  var anotherSingleton = Animal.singleton('SingletonLeo');
+  print('Are the two singletons the same? ${identical(sameSingleton, anotherSingleton)}'); // true
+
+
+  // 5. Operator Overloading and Callable Classes
+  print("\n--- Section: Operators & Callables ---");
+  final v1 = Vector2D(2, 3);
+  final v2 = Vector2D(5, 1);
+  print('$v1 + $v2 = ${v1 + v2}');
+  print('$v1 * 3 = ${v1 * 3}');
+  final greeter = Greeter();
+  print(greeter('World')); // Calling the instance like a function
+
+  // 6. Generics
+  print("\n--- Section: Generics ---");
+  var stringCache = Cache<int, String>();
+  stringCache.set(1, 'One');
+  stringCache.set(2, 'Two');
+  print('Generic cache get(1): ${stringCache.get(1)}');
+  stringCache.printCache();
+
+  var evenNumber = firstWhereOrDefault<int>(numbers, (n) => n % 2 == 0);
+  print('First even number: $evenNumber');
+
+  // 7. Extensions
+  print("\n--- Section: Extensions ---");
+  String testString = 'hello';
+  String palindrome = 'A man a plan a canal Panama';
+  print('"$testString".capitalize() -> "${testString.capitalize()}"');
+  print('"$palindrome" is palindrome? ${palindrome.isPalindrome}');
+
+  // 8. Records and Patterns
+  print("\n--- Section: Records and Patterns ---");
+  var userProfile = getUserProfile();
+  print(describeUser(userProfile));
+  print('User name from record: ${userProfile.$1}'); // Accessing by field number
+
+  print(processMessage(['log', 'info', 'User logged in']));
+  print(processMessage({'user': 'Bob', 'message': 'Hi there!'}));
+  print(processMessage((10, 20)));
+  print(processMessage(Vector2D(1, 1)));
+  print(processMessage(250));
+  checkCoordinates((2, 5));
+  checkCoordinates((1.5, 2.5, 3.0));
+
+
+  // 9. Enums (Enhanced)
+  print("\n--- Section: Enhanced Enums ---");
+  Color.blue.describe();
+  print('CSS for red: ${Color.red.toCss()}');
+  var colorsSorted = Color.values.toList()..sort();
+  print('Colors sorted by brightness: $colorsSorted');
+
+  // 10. Asynchronous Programming
+  print("\n--- Section: Async ---");
+  try {
+    String result = await fetchData('https://example.com/api/data');
+    print('Async/await result: $result');
+  } catch (e) {
+    print(e);
+  }
+
+  print("Listening to the count stream...");
+  await for (var number in countStream(4)) {
+    print('Stream number: $number');
+  }
+
+  print("Listening to the StreamController...");
+  final messageController = createMessageController();
+  var sub = messageController.stream.listen(
+    (message) => print('Controller message: $message'),
+    onDone: () => print('Message stream is done.'),
+  );
+  // Wait for the stream to close
+  await sub.asFuture();
+
+
+  // 11. Error Handling
+  print("\n--- Section: Error Handling ---");
+  await processDataWithErrors();
+  try {
+    validateInput('');
+  } catch (e) {
+    print('Caught expected validation error: $e');
+  }
+
+
+  // 12. Dynamic Features
+  print("\n--- Section: Dynamic/Metaprogramming ---");
+  dynamic dynamicGreeter = DynamicGreeter();
+  dynamicGreeter.sayHelloTo('Alice');
+  dynamicGreeter.nonExistentMethod();
+
+
+  // 13. Isolates (if not running on web)
+  if (!kIsWeb) {
+    print("\n--- Section: Isolates ---");
+    await runIsolateExample();
+  } else {
+    print("\n--- Section: Isolates (Skipped on Web) ---");
+  }
+
+  // 14. FFI (if not running on web)
+  if (!kIsWeb) {
+    print("\n--- Section: FFI ---");
+    runFfiExample();
+  } else {
+    print("\n--- Section: FFI (Skipped on Web) ---");
+  }
+
+
+  // 15. Standard Library Showcase
+  demonstrateStandardLibraries();
+
+  // 16. Deferred Loading (conceptual)
+  print("\n--- Section: Deferred Loading ---");
+  print("Simulating deferred library load...");
+  try {
+    // This requires a special compiler flag to work.
+    // In a real app, this would download the library on demand.
+    await http.loadLibrary();
+    // var response = await http.get(Uri.parse('https://example.com'));
+    // print('Deferred library loaded and used. Response code: ${response.statusCode}');
+    print("Deferred library 'http' loaded conceptually.");
+  } catch (e) {
+    print("Could not load deferred library (this is expected in a simple script).");
+  }
+
+  print("\n--- Demo Complete ---");
+}
+
+// A simple constant to check if running on the web
+const bool kIsWeb = identical(0, 0.0);
