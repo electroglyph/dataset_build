@@ -198,7 +198,7 @@ def main(
 def run():
     parser = argparse.ArgumentParser(
         prog="dataset_build",
-        description="Build a multilingual dataset for imatrix or quantization calibration for LLMs or embedding models",
+        description="Build a multilingual dataset for imatrix or quantization calibration of LLMs or embedding models",
     )
     parser.register("type", "string_list", parse_list)
     parser.add_argument(

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 name = "dataset_build"
 version = "0.1.1"
 authors = [{ name="electroglyph" },]
-description = "Build a multilingual dataset for imatrix or quantization calibration for LLMs or embedding models"
+description = "Build a multilingual dataset for imatrix or quantization calibration of LLMs or embedding models"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
