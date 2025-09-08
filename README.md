@@ -50,7 +50,7 @@ options:
   -l, --list            List available languages and exit.
   -m, --model MODEL     Path or name of HF model to use to check for unknown tokens.
   -c, --chat            Apply chat template to dataset, disabled by default. Requires model argument.
-  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than equal to maximum model sequence length. Requires model    
+  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model    
                         argument.
   -t, --tokenize        Output token ids instead of text, disabled by default. Requires model argument.
 ```
