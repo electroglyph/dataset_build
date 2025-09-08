@@ -59,9 +59,11 @@ options:
   -t, --tokenize        Output token ids instead of text, disabled by default. Requires model argument.
 ```
 
-If you use autosplit, the max sequence length for the model will be grabbed from either the model config or the tokenizer, and then the output will be a JSON file of arrays. Array len will be <= max sequence length.
+Unless you use --autosplit or --tokenize (or --list) a file called output.txt will be generated which is all the included languages stuffed into one text file.
 
-If you tokenize the output but don't autosplit, the output will be a JSON file of one giant array of all the input_ids.
+If you use autosplit, the max sequence length for the model will be grabbed from either the model config or the tokenizer, and then the output will be a JSON file (named output.json) of arrays. Array len will be <= max sequence length.
+
+If you tokenize the output but don't autosplit, the output will be a JSON file (named output.json) of one giant array of all the input_ids.
 
 If you apply the chat template, each text file is stuffed into a conversation like this:
 
