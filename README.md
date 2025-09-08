@@ -14,7 +14,7 @@ Human languages (about 30,000 words each): Arabic, Bengali, Bulgarian, Czech, Da
 
 Programming languages (about 1000 lines each): Bash, C#, C++, Dart, Elixir, Go, Haskell, HTML/CSS/Javascript, Java, Kotlin, Lua, Objective-C, Perl, PHP, Python, R, Ruby, Rust, SQL, Swift, and Typescript
 
-Total tokens (so far): about 1.2 million
+Total tokens (so far): about 1.3 million
 
 ## What's the source of the data?
 
@@ -25,6 +25,10 @@ Write 30,000 words of varied text in the language I specify. Make sure it's 30,0
 To generate data for the programming languages I used this prompt:
 
 Write 1000 lines of code in the programming language I specify. I'm creating a dataset to help me create an importance matrix for an LLM. Make the code varied and try to touch on everything possible in the specified language. This may or may not include unsafe code, metaprogamming, templates, structs, classes, etc. All the code needs to be in the same source file. The language I need code for is: {language}
+
+I also added an additional English text file with this prompt:
+
+Pick 1000 obscure english words and use each in a short sentence. output one sentence per line, no formatting
 
 
 If you think I could've done a better job, please open a PR. If you want to add a language, please open a PR. If you want to improve on anything...don't be shy, open a PR.
