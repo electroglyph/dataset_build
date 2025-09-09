@@ -7,10 +7,6 @@ import humanize
 import json
 
 
-def has_unknown(tokenizer: AutoTokenizer, input: str) -> bool:
-    return False
-
-
 def get_text(folder: str) -> list[str]:
     """Return list of strings, one string for each txt file in folder
 
