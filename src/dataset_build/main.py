@@ -95,7 +95,7 @@ def main(
         max_len = 0
         if tf:
             tf = tf.to_dict()
-            max_len = tf.get('max_position_embeddings')
+            max_len = tf.get("max_position_embeddings")
         if tokenizer.model_max_length and max_len:
             max_len = min(tokenizer.model_max_length, max_len)
         else:
@@ -154,11 +154,16 @@ def main(
                 stride=0,
             )
             if tokenize:
-                for to in tokenized_output["input_ids"]:
-                    split_output.append(to)
+                split_output = [
+                    {"input_ids": ids, "attention_mask": mask}
+                    for ids, mask in zip(
+                        tokenized_output["input_ids"],
+                        tokenized_output["attention_mask"],
+                    )
+                ]
                 with open("output.json", "w") as f:
                     f.write(json.dumps(split_output))
-                    print("Finished, output written to output.json")
+                    print("Finished, list of dicts written to output.json")
             else:
                 for to in tokenized_output["input_ids"]:
                     split_output.append(tokenizer.decode(to))
@@ -167,9 +172,10 @@ def main(
                     print("Finished, output written to output.json")
         else:
             if tokenize:
+                tokenized = tokenizer(output)
                 with open("output.json", "w") as f:
-                    f.write(json.dumps(tokenizer(output)["input_ids"]))
-                    print("Finished, output written to output.json as a single list.")
+                    f.write(json.dumps(dict(tokenized)))
+                    print("Finished, dict written to output.json")
             else:
                 with open("output.txt", "w") as f:
                     f.write(output)
@@ -185,9 +191,7 @@ def main(
             f.write(output)
             print("Finished, output written to output.txt")
     if model:
-        print(
-            f"Maximum sequence length for model: {humanize.intcomma(max_len)}"
-        )
+        print(f"Maximum sequence length for model: {humanize.intcomma(max_len)}")
         print(f"Tokens processed: {humanize.intcomma(count)} (approximately)")
 
 
