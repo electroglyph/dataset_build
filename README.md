@@ -62,9 +62,9 @@ options:
 
 Unless you use --autosplit or --tokenize (or --list) a file called output.txt will be generated which is all the included languages stuffed into one text file.
 
-If you use autosplit, the max sequence length for the model will be grabbed from either the model config or the tokenizer, and then the output will be a JSON file (named output.json) of arrays. Array len will be <= max sequence length.
+If you use autosplit, the max sequence length for the model will be grabbed from either the model config or the tokenizer, and then the output will be a JSON file (named output.json) of a list of dicts. Key names = "input_ids" and "attention_mask"
 
-If you tokenize the output but don't autosplit, the output will be a JSON file (named output.json) of one giant array of all the input_ids.
+If you tokenize the output but don't autosplit, the output will be a JSON file (named output.json) of one dict with the tokenizer output.
 
 If you apply the chat template, each text file is stuffed into a conversation like this:
 
