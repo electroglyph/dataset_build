@@ -154,12 +154,10 @@ def main(
                 stride=0,
             )
             if tokenize:
+                keys = tokenized_output.keys()
                 split_output = [
-                    {"input_ids": ids, "attention_mask": mask}
-                    for ids, mask in zip(
-                        tokenized_output["input_ids"],
-                        tokenized_output["attention_mask"],
-                    )
+                    dict(zip(keys, values))
+                    for values in zip(*tokenized_output.values())
                 ]
                 with open("output.json", "w") as f:
                     f.write(json.dumps(split_output))
