@@ -156,7 +156,7 @@ def main(
             if tokenize:
                 keys = tokenized_output.keys()
                 split_output = [
-                    dict(zip(keys, values))
+                    {key: [value] for key, value in zip(keys, values)}
                     for values in zip(*tokenized_output.values())
                 ]
                 with open("output.json", "w") as f:
