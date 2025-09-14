@@ -217,7 +217,7 @@ def run():
         "-l",
         "--list",
         action="store_true",
-        help="List available languages and exit.",
+        help="List available languages and exit. If model is specified, count the tokens for each language as well.",
     )
     parser.add_argument(
         "-m",
@@ -246,6 +246,18 @@ def run():
     args = parser.parse_args()
     if args.list:
         lang_dirs = get_langs()
+        if args.model:
+            tokenizer = AutoTokenizer.from_pretrained(args.model)
+            grand_total = 0
+            for k,v in lang_dirs.items():
+                current_total = 0
+                text = get_text(v)
+                for t in text:
+                    tokenized = tokenizer(t)
+                    current_total += len(tokenized["input_ids"])
+                print(f"{k} token count = {humanize.intcomma(current_total)}")
+                grand_total += current_total
+            print(f"Total tokens (for this tokenizer) found: {humanize.intcomma(grand_total)}")
         print(f"Languages: {",".join(lang_dirs.keys())}")
         sys.exit(0)
     if args.chat and not args.model:

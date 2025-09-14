@@ -44,7 +44,7 @@ If you think I could've done a better job, please open a PR. If you want to add 
 ```
 usage: dataset_build [-h] [-i INCLUDE] [-e EXCLUDE] [-l] [-m MODEL] [-c] [-a] [-t]
 
-Build a multilingual dataset for imatrix or quantization calibration for LLMs or embedding models
+Build a multilingual dataset for imatrix or quantization calibration of LLMs or embedding models
 
 options:
   -h, --help            show this help message and exit
@@ -52,11 +52,10 @@ options:
                         Comma separated list of languages to include, all languages are included by default.
   -e, --exclude EXCLUDE
                         Comma separated list of languages to exclude, no languages are excluded by default.
-  -l, --list            List available languages and exit.
+  -l, --list            List available languages and exit. If model is specified, count the tokens for each language as well.
   -m, --model MODEL     Path or name of HF model to use to check for unknown tokens.
   -c, --chat            Apply chat template to dataset, disabled by default. Requires model argument.
-  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires       
-                        model argument.
+  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model argument.     
   -t, --tokenize        Output token ids instead of text, disabled by default. Requires model argument.
 ```
 
@@ -65,6 +64,8 @@ Unless you use --autosplit or --tokenize (or --list) a file called output.txt wi
 If you use autosplit, the max sequence length for the model will be grabbed from either the model config or the tokenizer, and then the output will be a JSON file (named output.json) of a list of dicts. Key names = "input_ids" and "attention_mask"
 
 If you tokenize the output but don't autosplit, the output will be a JSON file (named output.json) of one dict with the tokenizer output.
+
+If you use --model argument with --list, the tokenizer will be used to list the token counts for each language and the total tokens overall (for that tokenizer).
 
 If you apply the chat template, each text file is stuffed into a conversation like this:
 
