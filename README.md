@@ -14,7 +14,7 @@ Human languages (about 30,000 words each): Arabic, Bengali, Bulgarian, Czech, Da
 
 Programming languages (about 1,000 lines each): Bash, C#, C++, Dart, Elixir, Go, Haskell, HTML/CSS/Javascript, Java, Kotlin, Lua, Objective-C, Perl, PHP, Python, R, Ruby, Rust, SQL, Swift, and Typescript
 
-Total tokens (so far): about 1.4 million
+Total tokens (so far): about 1.5 million
 
 ## What's the source of the data?
 
