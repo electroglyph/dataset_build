@@ -108,13 +108,13 @@ def main(
             texts = get_text(dir)
             for t in texts:
                 tokens = tokenizer(t)
-                count += len(tokens["input_ids"])
                 if unk in tokens["input_ids"]:
                     to_exclude.append(lang)
                     print(
                         f"Unknown token ({tokenizer.unk_token}) found for lang: {lang}, skipping this language."
                     )
                     break
+                count += len(tokens["input_ids"])
         if not to_exclude:
             print("Model supports all languages.")
         else:
