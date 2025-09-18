@@ -66,6 +66,7 @@ def main(
     chat: bool,
     autosplit: bool,
     tokenize: bool,
+    trust: bool = False,
 ):
     lang_dirs = get_langs()
     if include:
@@ -89,8 +90,8 @@ def main(
     tokenizer = None
     count = 0
     if model:
-        tokenizer = AutoTokenizer.from_pretrained(model)
-        config = AutoConfig.from_pretrained(model)
+        tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=trust)
+        config = AutoConfig.from_pretrained(model, trust_remote_code=trust)
         tf = config.get_text_config()
         max_len = 0
         if tf:
@@ -243,6 +244,11 @@ def run():
         action="store_true",
         help="Output token ids instead of text, disabled by default. Requires model argument.",
     )
+    parser.add_argument(
+        "--trust",
+        action="store_true",
+        help="Set trust_remote_code=True on tokenizer and config. Requires model argument.",
+    )
     args = parser.parse_args()
     if args.list:
         lang_dirs = get_langs()
@@ -269,6 +275,9 @@ def run():
     if args.tokenize and not args.model:
         parser.error("--tokenize requires --model argument")
         sys.exit(1)
+    if args.trust and not args.model:
+        parser.error("--trust requires --model argument")
+        sys.exit(1)
     main(
-        args.include, args.exclude, args.model, args.chat, args.autosplit, args.tokenize
+        args.include, args.exclude, args.model, args.chat, args.autosplit, args.tokenize, args.trust
     )
