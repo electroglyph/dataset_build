@@ -236,13 +236,13 @@ def run():
         "-a",
         "--autosplit",
         action="store_true",
-        help="Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model argument.",
+        help="Output json file of list of strings, disabled by default. Each list will be less than or equal to maximum model sequence length. Requires model argument.",
     )
     parser.add_argument(
         "-t",
         "--tokenize",
         action="store_true",
-        help="Output token ids instead of text, disabled by default. Requires model argument.",
+        help="Output tokenizer output instead of text, disabled by default. Requires model argument.",
     )
     parser.add_argument(
         "--trust",
