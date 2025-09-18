@@ -42,7 +42,7 @@ If you think I could've done a better job, please open a PR. If you want to add 
 
 `dataset_build -h` :
 ```
-usage: dataset_build [-h] [-i INCLUDE] [-e EXCLUDE] [-l] [-m MODEL] [-c] [-a] [-t]
+usage: dataset_build [-h] [-i INCLUDE] [-e EXCLUDE] [-l] [-m MODEL] [-c] [-a] [-t] [--trust]
 
 Build a multilingual dataset for imatrix or quantization calibration of LLMs or embedding models
 
@@ -55,8 +55,9 @@ options:
   -l, --list            List available languages and exit. If model is specified, count the tokens for each language as well.
   -m, --model MODEL     Path or name of HF model to use to check for unknown tokens.
   -c, --chat            Apply chat template to dataset, disabled by default. Requires model argument.
-  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model argument.     
+  -a, --autosplit       Output json file of array of strings, disabled by default. Each array will be less than or equal to maximum model sequence length. Requires model argument.
   -t, --tokenize        Output token ids instead of text, disabled by default. Requires model argument.
+  --trust               Set trust_remote_code=True on tokenizer and config. Requires model argument.
 ```
 
 Unless you use --autosplit or --tokenize (or --list) a file called output.txt will be generated which is all the included languages stuffed into one text file.
