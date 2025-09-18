@@ -68,7 +68,7 @@ If you tokenize the output but don't autosplit, the output will be a JSON file (
 
 If you use --model argument with --list, the tokenizer will be used to list the token counts for each language and the total tokens overall (for that tokenizer).
 
-If you apply the chat template, each text file is stuffed into a conversation like this:
+If you apply the chat template, each text file is stuffed into a conversation like this, and then the chat template is applied:
 
 ```python
 convo = [
